@@ -32,7 +32,7 @@
     testMessage = '';
     const url = currentSource === 'local' ? localUrl : cloudUrl;
     try {
-      const res = await fetch(`${url}/health`, { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(`${url}/api/v1/health`, { signal: AbortSignal.timeout(5000) });
       if (res.ok) {
         testStatus = 'ok';
         testMessage = 'Connected successfully';

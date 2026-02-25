@@ -17,7 +17,7 @@ export function setDataSource(source: DataSource) {
 
 export async function detectBackend(): Promise<DataSource> {
   try {
-    const res = await fetch('http://localhost:3847/health', { signal: AbortSignal.timeout(2000) });
+    const res = await fetch('http://localhost:3847/api/v1/health', { signal: AbortSignal.timeout(2000) });
     if (res.ok) {
       setDataSource('local');
       return 'local';
@@ -29,16 +29,20 @@ export async function detectBackend(): Promise<DataSource> {
   return 'demo';
 }
 
+function apiPath(path: string): string {
+  return `/api/v1${path}`;
+}
+
 async function apiGet<T>(path: string): Promise<T> {
   if (dataSource === 'demo') throw new Error('demo mode');
-  const res = await fetch(`${baseUrl}${path}`);
+  const res = await fetch(`${baseUrl}${apiPath(path)}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
 
 async function apiPost<T>(path: string, body: unknown): Promise<T> {
   if (dataSource === 'demo') throw new Error('demo mode');
-  const res = await fetch(`${baseUrl}${path}`, {
+  const res = await fetch(`${baseUrl}${apiPath(path)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -49,7 +53,7 @@ async function apiPost<T>(path: string, body: unknown): Promise<T> {
 
 async function apiPut<T>(path: string, body: unknown): Promise<T> {
   if (dataSource === 'demo') throw new Error('demo mode');
-  const res = await fetch(`${baseUrl}${path}`, {
+  const res = await fetch(`${baseUrl}${apiPath(path)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -60,7 +64,7 @@ async function apiPut<T>(path: string, body: unknown): Promise<T> {
 
 async function apiDelete(path: string): Promise<void> {
   if (dataSource === 'demo') throw new Error('demo mode');
-  const res = await fetch(`${baseUrl}${path}`, { method: 'DELETE' });
+  const res = await fetch(`${baseUrl}${apiPath(path)}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
 }
 

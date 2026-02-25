@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { detectBackend } from './lib/api';
+  import { detectBackend, getDataSource } from './lib/api';
+  import { connect, disconnect, onEvent, isConnected } from './lib/realtime';
   import { getCurrentRoute, navigate, matchRoute } from './lib/router';
   import Dashboard from './routes/Dashboard.svelte';
   import Patterns from './routes/Patterns.svelte';
@@ -14,18 +15,35 @@
   let sidebarCollapsed = $state(false);
   let searchQuery = $state('');
   let dataSource = $state<'local' | 'cloud' | 'demo'>('demo');
+  let wsConnected = $state(false);
   let currentRoute = $state(getCurrentRoute());
 
   $effect(() => {
     detectBackend().then(source => {
       dataSource = source;
+      if (source === 'local') {
+        connect('http://localhost:3847');
+      } else if (source === 'cloud') {
+        connect('https://mur-server.fly.dev');
+      }
+    });
+
+    const unsub = onEvent(() => {
+      // Force re-render on any data change by toggling wsConnected
+      wsConnected = isConnected();
+      // Navigate to current route to trigger data refresh
+      currentRoute = getCurrentRoute();
     });
 
     const onHashChange = () => {
       currentRoute = getCurrentRoute();
     };
     window.addEventListener('hashchange', onHashChange);
-    return () => window.removeEventListener('hashchange', onHashChange);
+    return () => {
+      window.removeEventListener('hashchange', onHashChange);
+      unsub();
+      disconnect();
+    };
   });
 
   const dataSourceLabel = $derived(
@@ -122,9 +140,17 @@
         />
       </div>
 
-      <div class="flex items-center gap-2 rounded-full bg-slate-800 px-3 py-1 text-xs">
-        <span>{dataSourceIcon}</span>
-        <span class="text-slate-400">{dataSourceLabel}</span>
+      <div class="flex items-center gap-3">
+        {#if dataSource !== 'demo' && wsConnected}
+          <span class="flex items-center gap-1.5 text-xs text-emerald-400" title="Real-time connected">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            Live
+          </span>
+        {/if}
+        <div class="flex items-center gap-2 rounded-full bg-slate-800 px-3 py-1 text-xs">
+          <span>{dataSourceIcon}</span>
+          <span class="text-slate-400">{dataSourceLabel}</span>
+        </div>
       </div>
     </header>
 
