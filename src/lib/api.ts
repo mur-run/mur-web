@@ -73,58 +73,45 @@ async function apiDelete(path: string): Promise<void> {
 let demoPatterns = [...mockPatterns];
 
 export async function getPatterns(): Promise<Pattern[]> {
-  try {
-    return await apiGet<Pattern[]>('/patterns');
-  } catch {
-    return demoPatterns;
-  }
+  if (dataSource === 'demo') return demoPatterns;
+  return apiGet<Pattern[]>('/patterns');
 }
 
 export async function getPattern(id: string): Promise<Pattern | undefined> {
-  try {
-    return await apiGet<Pattern>(`/patterns/${id}`);
-  } catch {
-    return demoPatterns.find(p => p.id === id);
-  }
+  if (dataSource === 'demo') return demoPatterns.find(p => p.id === id);
+  return apiGet<Pattern>(`/patterns/${id}`);
 }
 
 export async function createPattern(pattern: Omit<Pattern, 'id' | 'stats'>): Promise<Pattern> {
-  try {
-    return await apiPost<Pattern>('/patterns', pattern);
-  } catch {
+  if (dataSource === 'demo') {
     const newPattern: Pattern = {
       ...pattern,
       id: `pattern-${Date.now()}`,
-      stats: {
-        injections: 0,
-        last_used: new Date().toISOString(),
-        created: new Date().toISOString(),
-        updated: new Date().toISOString(),
-      },
+      stats: { injections: 0, last_used: new Date().toISOString(), created: new Date().toISOString(), updated: new Date().toISOString() },
     };
     demoPatterns = [...demoPatterns, newPattern];
     return newPattern;
   }
+  return apiPost<Pattern>('/patterns', pattern);
 }
 
 export async function updatePattern(id: string, pattern: Partial<Pattern>): Promise<Pattern> {
-  try {
-    return await apiPut<Pattern>(`/patterns/${id}`, pattern);
-  } catch {
+  if (dataSource === 'demo') {
     const idx = demoPatterns.findIndex(p => p.id === id);
     if (idx === -1) throw new Error('Pattern not found');
     const updated = { ...demoPatterns[idx], ...pattern, stats: { ...demoPatterns[idx].stats, updated: new Date().toISOString() } };
     demoPatterns = [...demoPatterns.slice(0, idx), updated, ...demoPatterns.slice(idx + 1)];
     return updated;
   }
+  return apiPut<Pattern>(`/patterns/${id}`, pattern);
 }
 
 export async function deletePattern(id: string): Promise<void> {
-  try {
-    await apiDelete(`/patterns/${id}`);
-  } catch {
+  if (dataSource === 'demo') {
     demoPatterns = demoPatterns.filter(p => p.id !== id);
+    return;
   }
+  await apiDelete(`/patterns/${id}`);
 }
 
 // --- Workflow API ---
@@ -132,46 +119,36 @@ export async function deletePattern(id: string): Promise<void> {
 let demoWorkflows = [...mockWorkflows];
 
 export async function getWorkflows(): Promise<Workflow[]> {
-  try {
-    return await apiGet<Workflow[]>('/workflows');
-  } catch {
-    return demoWorkflows;
-  }
+  if (dataSource === 'demo') return demoWorkflows;
+  return apiGet<Workflow[]>('/workflows');
 }
 
 export async function createWorkflow(wf: Omit<Workflow, 'id' | 'created' | 'updated'>): Promise<Workflow> {
-  try {
-    return await apiPost<Workflow>('/workflows', wf);
-  } catch {
-    const newWf: Workflow = {
-      ...wf,
-      id: `workflow-${Date.now()}`,
-      created: new Date().toISOString(),
-      updated: new Date().toISOString(),
-    };
+  if (dataSource === 'demo') {
+    const newWf: Workflow = { ...wf, id: `workflow-${Date.now()}`, created: new Date().toISOString(), updated: new Date().toISOString() };
     demoWorkflows = [...demoWorkflows, newWf];
     return newWf;
   }
+  return apiPost<Workflow>('/workflows', wf);
 }
 
 export async function updateWorkflow(id: string, wf: Partial<Workflow>): Promise<Workflow> {
-  try {
-    return await apiPut<Workflow>(`/workflows/${id}`, wf);
-  } catch {
+  if (dataSource === 'demo') {
     const idx = demoWorkflows.findIndex(w => w.id === id);
     if (idx === -1) throw new Error('Workflow not found');
     const updated = { ...demoWorkflows[idx], ...wf, updated: new Date().toISOString() };
     demoWorkflows = [...demoWorkflows.slice(0, idx), updated, ...demoWorkflows.slice(idx + 1)];
     return updated;
   }
+  return apiPut<Workflow>(`/workflows/${id}`, wf);
 }
 
 export async function deleteWorkflow(id: string): Promise<void> {
-  try {
-    await apiDelete(`/workflows/${id}`);
-  } catch {
+  if (dataSource === 'demo') {
     demoWorkflows = demoWorkflows.filter(w => w.id !== id);
+    return;
   }
+  await apiDelete(`/workflows/${id}`);
 }
 
 // --- Dashboard API ---

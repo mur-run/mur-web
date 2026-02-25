@@ -1,11 +1,9 @@
 <script lang="ts">
   import { navigate } from '../lib/router';
-  import { getPatterns } from '../lib/api';
   import type { Pattern, Maturity, Tier } from '../lib/types';
   import MaturityBadge from '../components/MaturityBadge.svelte';
   import ConfidenceSlider from '../components/ConfidenceSlider.svelte';
-
-  import { deletePattern, updatePattern } from '../lib/api';
+  import * as store from '../lib/dataStore';
   import { showToast } from '../lib/toast';
 
   let allPatterns = $state<Pattern[]>([]);
@@ -19,7 +17,9 @@
   let selectMode = $state(false);
 
   $effect(() => {
-    getPatterns().then(p => allPatterns = p);
+    allPatterns = store.getPatterns();
+    const unsub = store.subscribe(() => { allPatterns = store.getPatterns(); });
+    return unsub;
   });
 
   const allTags = $derived(
@@ -78,10 +78,9 @@
 
   async function bulkArchive() {
     for (const id of selected) {
-      await updatePattern(id, { archived: true } as Partial<Pattern>);
+      await store.updatePattern(id, { archived: true } as Partial<Pattern>);
     }
     showToast(`Archived ${selected.size} patterns`, 'success');
-    allPatterns = allPatterns.map(p => selected.has(p.id) ? { ...p, archived: true } : p);
     selected = new Set();
     selectMode = false;
   }
@@ -89,10 +88,9 @@
   async function bulkDelete() {
     if (!confirm(`Delete ${selected.size} patterns permanently?`)) return;
     for (const id of selected) {
-      await deletePattern(id);
+      await store.deletePattern(id);
     }
     showToast(`Deleted ${selected.size} patterns`, 'success');
-    allPatterns = allPatterns.filter(p => !selected.has(p.id));
     selected = new Set();
     selectMode = false;
   }

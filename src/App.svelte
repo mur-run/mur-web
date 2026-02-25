@@ -14,16 +14,21 @@
   import Toast from './components/Toast.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import { showToast } from './lib/toast';
+  import { load as loadData, refresh as refreshData, isLoaded } from './lib/dataStore';
 
   let sidebarCollapsed = $state(false);
+  let mobileMenuOpen = $state(false);
   let searchQuery = $state('');
   let dataSource = $state<'local' | 'cloud' | 'demo'>('demo');
   let wsConnected = $state(false);
+  let loading = $state(true);
   let currentRoute = $state(getCurrentRoute());
 
   $effect(() => {
     detectBackend().then(source => {
       dataSource = source;
+      loading = true;
+      loadData().finally(() => loading = false); // Initial data fetch into shared store
       if (source === 'local') {
         connect('http://localhost:3847');
       } else if (source === 'cloud') {
@@ -33,8 +38,9 @@
 
     const unsub = onEvent((evt) => {
       wsConnected = isConnected();
-      currentRoute = getCurrentRoute();
-      // Show toast for real-time events
+      // Refetch data from backend on any mutation event (#2)
+      refreshData();
+      // Show toast
       const labels: Record<string, string> = {
         'pattern:created': '✨ Pattern created',
         'pattern:updated': '📝 Pattern updated',
@@ -97,11 +103,11 @@
 </script>
 
 <div class="flex h-screen overflow-hidden bg-slate-900">
-  <!-- Mobile sidebar overlay -->
-  {#if !sidebarCollapsed}
+  <!-- Mobile sidebar overlay (#7 fix) -->
+  {#if mobileMenuOpen}
     <div
       class="fixed inset-0 z-20 bg-black/50 md:hidden"
-      onclick={() => sidebarCollapsed = true}
+      onclick={() => mobileMenuOpen = false}
       onkeydown={() => {}}
       role="button"
       tabindex="-1"
@@ -112,7 +118,7 @@
   <aside class="flex flex-col border-r border-slate-700/50 bg-slate-950 transition-all duration-200
     {sidebarCollapsed ? 'w-16' : 'w-56'}
     max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-30
-    {sidebarCollapsed ? 'max-md:-translate-x-full' : 'max-md:translate-x-0'}"
+    {mobileMenuOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'}"
   >
     <div class="flex h-14 items-center gap-2 border-b border-slate-700/50 px-4">
       {#if !sidebarCollapsed}
@@ -127,6 +133,7 @@
       {#each navItems as item}
         <a
           href="#{item.path}"
+          onclick={() => mobileMenuOpen = false}
           class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors {isActive(item.path) ? 'bg-slate-800 text-emerald-400' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}"
         >
           <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -155,7 +162,7 @@
     <!-- Top bar -->
     <header class="flex h-14 items-center gap-4 border-b border-slate-700/50 bg-slate-900/80 px-4 md:px-6 backdrop-blur-sm">
       <button
-        onclick={() => sidebarCollapsed = false}
+        onclick={() => mobileMenuOpen = true}
         class="md:hidden text-slate-400 hover:text-slate-200 transition-colors"
         aria-label="Open menu"
       >
@@ -188,6 +195,13 @@
         </div>
       </div>
     </header>
+
+    <!-- Loading bar (#8) -->
+    {#if loading}
+      <div class="h-0.5 bg-slate-800 overflow-hidden">
+        <div class="h-full w-1/3 bg-emerald-500 animate-pulse rounded-r"></div>
+      </div>
+    {/if}
 
     <!-- Content area -->
     <main class="flex-1 overflow-auto p-6">

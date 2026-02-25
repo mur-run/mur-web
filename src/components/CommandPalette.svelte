@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getPatterns, getWorkflows } from '../lib/api';
+  import * as store from '../lib/dataStore';
   import { navigate } from '../lib/router';
   import type { Pattern, Workflow } from '../lib/types';
 
@@ -58,10 +58,8 @@
         if (open) {
           query = '';
           selectedIdx = 0;
-          Promise.all([getPatterns(), getWorkflows()]).then(([p, w]) => {
-            patterns = p;
-            workflows = w;
-          });
+          patterns = store.getPatterns();
+          workflows = store.getWorkflows();
           setTimeout(() => inputEl?.focus(), 50);
         }
       }

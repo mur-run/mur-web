@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getWorkflows, createWorkflow, updateWorkflow, deleteWorkflow } from '../lib/api';
+  import * as store from '../lib/dataStore';
   import type { Workflow } from '../lib/types';
 
   let workflows = $state<Workflow[]>([]);
@@ -18,7 +18,9 @@
   let editSteps = $state<string[]>([]);
 
   $effect(() => {
-    getWorkflows().then(w => workflows = w);
+    workflows = store.getWorkflows();
+    const unsub = store.subscribe(() => { workflows = store.getWorkflows(); });
+    return unsub;
   });
 
   function formatDate(iso: string): string {
@@ -38,12 +40,11 @@
 
   async function handleCreate() {
     if (!newName.trim()) return;
-    const wf = await createWorkflow({
+    await store.createWorkflow({
       name: newName.trim(),
       description: newDesc.trim(),
       steps: newSteps.filter(s => s.trim()),
     });
-    workflows = [...workflows, wf];
     newName = ''; newDesc = ''; newSteps = ['']; showNew = false;
   }
 
@@ -67,18 +68,16 @@
 
   async function handleUpdate() {
     if (!editingId || !editName.trim()) return;
-    const updated = await updateWorkflow(editingId, {
+    await store.updateWorkflow(editingId, {
       name: editName.trim(),
       description: editDesc.trim(),
       steps: editSteps.filter(s => s.trim()),
     });
-    workflows = workflows.map(w => w.id === editingId ? updated : w);
     editingId = null;
   }
 
   async function handleDelete(id: string) {
-    await deleteWorkflow(id);
-    workflows = workflows.filter(w => w.id !== id);
+    await store.deleteWorkflow(id);
     deleteConfirm = null;
   }
 </script>

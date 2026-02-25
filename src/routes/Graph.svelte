@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getPatterns } from '../lib/api';
+  import * as store from '../lib/dataStore';
   import type { Pattern } from '../lib/types';
 
   let patterns = $state<Pattern[]>([]);
@@ -36,15 +36,28 @@
   };
 
   $effect(() => {
-    getPatterns().then(p => {
-      patterns = p.filter(p => !p.archived);
+    patterns = store.getPatterns().filter(p => !p.archived);
+    buildGraph();
+    const unsub = store.subscribe(() => {
+      patterns = store.getPatterns().filter(p => !p.archived);
       buildGraph();
     });
+    return unsub;
   });
 
   $effect(() => {
     if (canvasEl && nodes.length > 0) {
       startSimulation();
+
+      // Fix #4: handle resize
+      const ro = new ResizeObserver(() => {
+        if (canvasEl) {
+          cancelAnimationFrame(animId);
+          startSimulation();
+        }
+      });
+      ro.observe(canvasEl);
+      return () => { cancelAnimationFrame(animId); ro.disconnect(); };
     }
     return () => { cancelAnimationFrame(animId); };
   });

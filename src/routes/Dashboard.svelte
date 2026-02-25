@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { getDashboardStats, getPatterns } from '../lib/api';
+  import { getDashboardStats } from '../lib/api';
+  import * as store from '../lib/dataStore';
   import type { DashboardStats, Pattern, Maturity } from '../lib/types';
   import MaturityBadge from '../components/MaturityBadge.svelte';
   import ConfidenceSlider from '../components/ConfidenceSlider.svelte';
@@ -13,10 +14,13 @@
 
   $effect(() => {
     loadData();
+    const unsub = store.subscribe(() => loadData());
+    return unsub;
   });
 
   async function loadData() {
-    const [s, patterns] = await Promise.all([getDashboardStats(), getPatterns()]);
+    const patterns = store.getPatterns();
+    const s = await getDashboardStats();
     stats = s;
     allPatterns = patterns.filter(p => !p.archived);
     decayWarnings = patterns.filter(p => !p.archived && p.confidence < 0.5).sort((a, b) => a.confidence - b.confidence);

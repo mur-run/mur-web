@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getPatterns, getWorkflows } from '../lib/api';
+  import * as store from '../lib/dataStore';
   import { navigate } from '../lib/router';
   import type { Pattern, Workflow } from '../lib/types';
   import MaturityBadge from '../components/MaturityBadge.svelte';
@@ -11,10 +11,13 @@
   let workflows = $state<Workflow[]>([]);
 
   $effect(() => {
-    Promise.all([getPatterns(), getWorkflows()]).then(([p, w]) => {
-      patterns = p;
-      workflows = w;
+    patterns = store.getPatterns();
+    workflows = store.getWorkflows();
+    const unsub = store.subscribe(() => {
+      patterns = store.getPatterns();
+      workflows = store.getWorkflows();
     });
+    return unsub;
   });
 
   const q = $derived(query.toLowerCase());
