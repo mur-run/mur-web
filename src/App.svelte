@@ -11,6 +11,9 @@
   import Settings from './routes/Settings.svelte';
   import Search from './routes/Search.svelte';
   import Graph from './routes/Graph.svelte';
+  import Toast from './components/Toast.svelte';
+  import CommandPalette from './components/CommandPalette.svelte';
+  import { showToast } from './lib/toast';
 
   let sidebarCollapsed = $state(false);
   let searchQuery = $state('');
@@ -28,11 +31,20 @@
       }
     });
 
-    const unsub = onEvent(() => {
-      // Force re-render on any data change by toggling wsConnected
+    const unsub = onEvent((evt) => {
       wsConnected = isConnected();
-      // Navigate to current route to trigger data refresh
       currentRoute = getCurrentRoute();
+      // Show toast for real-time events
+      const labels: Record<string, string> = {
+        'pattern:created': '✨ Pattern created',
+        'pattern:updated': '📝 Pattern updated',
+        'pattern:deleted': '🗑️ Pattern deleted',
+        'workflow:created': '✨ Workflow created',
+        'workflow:updated': '📝 Workflow updated',
+        'workflow:deleted': '🗑️ Workflow deleted',
+      };
+      const label = labels[evt.type];
+      if (label) showToast(`${label}: ${evt.id}`, 'success');
     });
 
     const onHashChange = () => {
@@ -85,8 +97,23 @@
 </script>
 
 <div class="flex h-screen overflow-hidden bg-slate-900">
+  <!-- Mobile sidebar overlay -->
+  {#if !sidebarCollapsed}
+    <div
+      class="fixed inset-0 z-20 bg-black/50 md:hidden"
+      onclick={() => sidebarCollapsed = true}
+      onkeydown={() => {}}
+      role="button"
+      tabindex="-1"
+    ></div>
+  {/if}
+
   <!-- Sidebar -->
-  <aside class="flex flex-col border-r border-slate-700/50 bg-slate-950 transition-all duration-200 {sidebarCollapsed ? 'w-16' : 'w-56'}">
+  <aside class="flex flex-col border-r border-slate-700/50 bg-slate-950 transition-all duration-200
+    {sidebarCollapsed ? 'w-16' : 'w-56'}
+    max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-30
+    {sidebarCollapsed ? 'max-md:-translate-x-full' : 'max-md:translate-x-0'}"
+  >
     <div class="flex h-14 items-center gap-2 border-b border-slate-700/50 px-4">
       {#if !sidebarCollapsed}
         <span class="text-lg font-bold text-emerald-400">🧠 MUR</span>
@@ -126,7 +153,14 @@
   <!-- Main content -->
   <div class="flex flex-1 flex-col overflow-hidden">
     <!-- Top bar -->
-    <header class="flex h-14 items-center gap-4 border-b border-slate-700/50 bg-slate-900/80 px-6 backdrop-blur-sm">
+    <header class="flex h-14 items-center gap-4 border-b border-slate-700/50 bg-slate-900/80 px-4 md:px-6 backdrop-blur-sm">
+      <button
+        onclick={() => sidebarCollapsed = false}
+        class="md:hidden text-slate-400 hover:text-slate-200 transition-colors"
+        aria-label="Open menu"
+      >
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18" /></svg>
+      </button>
       <div class="relative flex-1 max-w-md">
         <svg class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
@@ -136,8 +170,9 @@
           placeholder="Search patterns & workflows..."
           bind:value={searchQuery}
           onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter' && searchQuery.trim()) navigate('/search/' + encodeURIComponent(searchQuery.trim())); }}
-          class="w-full rounded-lg border border-slate-700 bg-slate-800 py-1.5 pl-10 pr-3 text-sm text-slate-200 placeholder-slate-500 outline-none transition-colors focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/25"
+          class="w-full rounded-lg border border-slate-700 bg-slate-800 py-1.5 pl-10 pr-12 text-sm text-slate-200 placeholder-slate-500 outline-none transition-colors focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/25"
         />
+        <kbd class="absolute right-3 top-1/2 -translate-y-1/2 rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-500 border border-slate-600">⌘K</kbd>
       </div>
 
       <div class="flex items-center gap-3">
@@ -182,3 +217,6 @@
     </main>
   </div>
 </div>
+
+<Toast />
+<CommandPalette />

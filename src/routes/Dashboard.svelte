@@ -3,8 +3,11 @@
   import type { DashboardStats, Pattern, Maturity } from '../lib/types';
   import MaturityBadge from '../components/MaturityBadge.svelte';
   import ConfidenceSlider from '../components/ConfidenceSlider.svelte';
+  import ConfidenceChart from '../components/ConfidenceChart.svelte';
+  import ActivityTimeline from '../components/ActivityTimeline.svelte';
 
   let stats = $state<DashboardStats | null>(null);
+  let allPatterns = $state<Pattern[]>([]);
   let decayWarnings = $state<Pattern[]>([]);
   let recentPatterns = $state<Pattern[]>([]);
 
@@ -15,6 +18,7 @@
   async function loadData() {
     const [s, patterns] = await Promise.all([getDashboardStats(), getPatterns()]);
     stats = s;
+    allPatterns = patterns.filter(p => !p.archived);
     decayWarnings = patterns.filter(p => !p.archived && p.confidence < 0.5).sort((a, b) => a.confidence - b.confidence);
     recentPatterns = [...patterns].sort((a, b) => new Date(b.stats.updated).getTime() - new Date(a.stats.updated).getTime()).slice(0, 5);
   }
@@ -99,6 +103,18 @@
             {m}: {stats.maturityDistribution[m]}
           </div>
         {/each}
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-6">
+        <h2 class="text-sm font-medium text-slate-300 mb-3">Confidence Distribution</h2>
+        <ConfidenceChart patterns={allPatterns} />
+      </div>
+      <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-6">
+        <h2 class="text-sm font-medium text-slate-300 mb-3">Activity (Last 30 Days)</h2>
+        <ActivityTimeline patterns={allPatterns} />
       </div>
     </div>
 

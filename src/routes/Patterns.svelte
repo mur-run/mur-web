@@ -5,6 +5,9 @@
   import MaturityBadge from '../components/MaturityBadge.svelte';
   import ConfidenceSlider from '../components/ConfidenceSlider.svelte';
 
+  import { deletePattern, updatePattern } from '../lib/api';
+  import { showToast } from '../lib/toast';
+
   let allPatterns = $state<Pattern[]>([]);
   let searchQuery = $state('');
   let maturityFilter = $state<Maturity | ''>('');
@@ -12,6 +15,8 @@
   let tagFilter = $state('');
   let sortBy = $state<'name' | 'confidence' | 'updated'>('updated');
   let sortDir = $state<'asc' | 'desc'>('desc');
+  let selected = $state<Set<string>>(new Set());
+  let selectMode = $state(false);
 
   $effect(() => {
     getPatterns().then(p => allPatterns = p);
@@ -57,6 +62,41 @@
     return result;
   });
 
+  function toggleSelect(id: string) {
+    const s = new Set(selected);
+    if (s.has(id)) s.delete(id); else s.add(id);
+    selected = s;
+  }
+
+  function selectAll() {
+    selected = new Set(filtered.map(p => p.id));
+  }
+
+  function selectNone() {
+    selected = new Set();
+  }
+
+  async function bulkArchive() {
+    for (const id of selected) {
+      await updatePattern(id, { archived: true } as Partial<Pattern>);
+    }
+    showToast(`Archived ${selected.size} patterns`, 'success');
+    allPatterns = allPatterns.map(p => selected.has(p.id) ? { ...p, archived: true } : p);
+    selected = new Set();
+    selectMode = false;
+  }
+
+  async function bulkDelete() {
+    if (!confirm(`Delete ${selected.size} patterns permanently?`)) return;
+    for (const id of selected) {
+      await deletePattern(id);
+    }
+    showToast(`Deleted ${selected.size} patterns`, 'success');
+    allPatterns = allPatterns.filter(p => !selected.has(p.id));
+    selected = new Set();
+    selectMode = false;
+  }
+
   function toggleSort(field: typeof sortBy) {
     if (sortBy === field) {
       sortDir = sortDir === 'asc' ? 'desc' : 'asc';
@@ -73,12 +113,20 @@
       <h1 class="text-2xl font-bold text-slate-100">Patterns</h1>
       <p class="text-sm text-slate-400 mt-1">{filtered.length} of {allPatterns.filter(p => !p.archived).length} patterns</p>
     </div>
-    <button
-      onclick={() => navigate('/patterns/new')}
-      class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 transition-colors"
-    >
-      + New Pattern
-    </button>
+    <div class="flex items-center gap-2">
+      <button
+        onclick={() => { selectMode = !selectMode; if (!selectMode) selected = new Set(); }}
+        class="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors {selectMode ? 'border-emerald-500/50 text-emerald-400' : ''}"
+      >
+        ☑ Select
+      </button>
+      <button
+        onclick={() => navigate('/patterns/new')}
+        class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 transition-colors"
+      >
+        + New Pattern
+      </button>
+    </div>
   </div>
 
   <!-- Filters -->
@@ -141,15 +189,34 @@
     </div>
   </div>
 
+  <!-- Bulk actions bar -->
+  {#if selectMode}
+    <div class="flex items-center gap-3 rounded-lg border border-slate-700/50 bg-slate-800/50 px-4 py-2">
+      <span class="text-xs text-slate-400">{selected.size} selected</span>
+      <button onclick={selectAll} class="text-xs text-emerald-400 hover:text-emerald-300">All</button>
+      <button onclick={selectNone} class="text-xs text-slate-500 hover:text-slate-300">None</button>
+      <div class="flex-1"></div>
+      {#if selected.size > 0}
+        <button onclick={bulkArchive} class="rounded bg-amber-600/80 px-3 py-1 text-xs text-white hover:bg-amber-500">Archive ({selected.size})</button>
+        <button onclick={bulkDelete} class="rounded bg-red-600/80 px-3 py-1 text-xs text-white hover:bg-red-500">Delete ({selected.size})</button>
+      {/if}
+    </div>
+  {/if}
+
   <!-- Pattern grid -->
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
     {#each filtered as pattern}
       <a
-        href="#/patterns/{pattern.id}"
-        class="group rounded-lg border border-slate-700/50 bg-slate-800 p-4 hover:border-slate-600 hover:bg-slate-800/80 transition-all"
+        href={selectMode ? undefined : `#/patterns/${pattern.id}`}
+        onclick={selectMode ? (e: MouseEvent) => { e.preventDefault(); toggleSelect(pattern.id); } : undefined}
+        class="group rounded-lg border bg-slate-800 p-4 hover:bg-slate-800/80 transition-all
+          {selected.has(pattern.id) ? 'border-emerald-500/50' : 'border-slate-700/50 hover:border-slate-600'}"
       >
         <div class="flex items-start justify-between gap-2 mb-2">
-          <h3 class="text-sm font-semibold text-slate-200 group-hover:text-emerald-400 transition-colors truncate">
+          {#if selectMode}
+            <input type="checkbox" checked={selected.has(pattern.id)} class="mt-0.5 accent-emerald-500" tabindex="-1" />
+          {/if}
+          <h3 class="text-sm font-semibold text-slate-200 group-hover:text-emerald-400 transition-colors truncate flex-1">
             {pattern.id}
           </h3>
           <MaturityBadge maturity={pattern.maturity} size="sm" />
