@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { navigate } from 'svelte-routing';
+  import { navigate } from '../lib/router';
   import { createPattern } from '../lib/api';
   import type { Pattern, PatternTemplate } from '../lib/types';
   import VisualEditor from '../components/VisualEditor.svelte';

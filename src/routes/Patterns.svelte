@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { navigate } from 'svelte-routing';
+  import { navigate } from '../lib/router';
   import { getPatterns } from '../lib/api';
   import type { Pattern, Maturity, Tier } from '../lib/types';
   import MaturityBadge from '../components/MaturityBadge.svelte';
