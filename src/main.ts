@@ -7,3 +7,8 @@ const app = mount(App, {
 })
 
 export default app
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/mur-web/sw.js').catch(() => {});
+}

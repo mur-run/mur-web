@@ -1,0 +1,21 @@
+{
+  "name": "MUR Dashboard",
+  "short_name": "MUR",
+  "description": "Web dashboard for MUR — continuous learning for AI assistants",
+  "start_url": "/mur-web/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#34d399",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
