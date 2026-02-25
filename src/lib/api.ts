@@ -1,8 +1,8 @@
 import type { Pattern, Workflow, DashboardStats, DataSource } from './types';
 import { mockPatterns, mockWorkflows } from './mock-data';
 
-let dataSource: DataSource = $state('demo');
-let baseUrl = $state('');
+let dataSource: DataSource = 'demo';
+let baseUrl = '';
 
 export function getDataSource(): DataSource {
   return dataSource;
