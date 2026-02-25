@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
   import type { Pattern } from '../lib/types';
   import { EditorView, basicSetup } from 'codemirror';
   import { EditorState } from '@codemirror/state';
@@ -14,7 +13,7 @@
 
   let { pattern, onchange }: Props = $props();
 
-  let editorEl: HTMLDivElement;
+  let editorEl: HTMLDivElement | undefined = $state();
   let editorView: EditorView | undefined;
   let format = $state<'yaml' | 'markdown'>('yaml');
 
@@ -80,12 +79,14 @@
     return format === 'yaml' ? patternToYaml(pattern) : patternToMarkdown(pattern);
   }
 
-  function createEditor() {
-    if (editorView) editorView.destroy();
+  // Single $effect handles mount, format changes, and cleanup
+  $effect(() => {
+    if (!editorEl) return;
 
+    // Access format to track it as a dependency
     const langExt = format === 'yaml' ? yaml() : markdown();
 
-    editorView = new EditorView({
+    const view = new EditorView({
       state: EditorState.create({
         doc: getContent(),
         extensions: [
@@ -98,22 +99,18 @@
             '.cm-content': { fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace' },
           }),
           EditorView.lineWrapping,
+          EditorState.readOnly.of(true),
         ],
       }),
       parent: editorEl,
     });
-  }
 
-  onMount(() => {
-    createEditor();
-    return () => editorView?.destroy();
-  });
+    editorView = view;
 
-  $effect(() => {
-    // Re-create editor when format changes
-    if (editorEl && format) {
-      createEditor();
-    }
+    return () => {
+      view.destroy();
+      editorView = undefined;
+    };
   });
 </script>
 

@@ -5,6 +5,9 @@
   import Patterns from './routes/Patterns.svelte';
   import PatternEditor from './routes/PatternEditor.svelte';
   import NewPattern from './routes/NewPattern.svelte';
+  import Import from './routes/Import.svelte';
+  import Workflows from './routes/Workflows.svelte';
+  import Settings from './routes/Settings.svelte';
 
   let sidebarCollapsed = $state(false);
   let searchQuery = $state('');
@@ -33,6 +36,7 @@
   const navItems = [
     { path: '/', label: 'Dashboard', icon: 'grid' },
     { path: '/patterns', label: 'Patterns', icon: 'layers' },
+    { path: '/import', label: 'Import', icon: 'upload' },
     { path: '/workflows', label: 'Workflows', icon: 'git-branch' },
     { path: '/settings', label: 'Settings', icon: 'settings' },
   ];
@@ -42,6 +46,7 @@
       grid: 'M4 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5zm10 0a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V5zM4 15a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-4zm10 0a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-4z',
       layers: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
       'git-branch': 'M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm12-8a9 9 0 0 1-9 9',
+      upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
       settings: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
     };
     return icons[icon] || '';
@@ -125,6 +130,12 @@
         <Patterns />
       {:else if currentRoute === '/patterns/new'}
         <NewPattern />
+      {:else if currentRoute === '/import'}
+        <Import />
+      {:else if currentRoute === '/workflows'}
+        <Workflows />
+      {:else if currentRoute === '/settings'}
+        <Settings />
       {:else if routeParams}
         <PatternEditor id={routeParams.id} />
       {:else}

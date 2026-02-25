@@ -105,10 +105,13 @@
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
       <!-- Recent activity -->
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-6">
-        <h2 class="text-sm font-medium text-slate-300 mb-4">Recent Activity</h2>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-sm font-medium text-slate-300">Recent Activity</h2>
+          <a href="#/patterns" class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">View all</a>
+        </div>
         <div class="space-y-3">
           {#each recentPatterns as pattern}
-            <a href="/patterns/{pattern.id}" class="flex items-center gap-3 rounded-lg p-2 -mx-2 hover:bg-slate-700/30 transition-colors">
+            <a href="#/patterns/{pattern.id}" class="flex items-center gap-3 rounded-lg p-2 -mx-2 hover:bg-slate-700/30 transition-colors">
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
                   <span class="text-sm font-medium text-slate-200 truncate">{pattern.id}</span>
@@ -137,7 +140,7 @@
         {:else}
           <div class="space-y-3">
             {#each decayWarnings as pattern}
-              <a href="/patterns/{pattern.id}" class="block rounded-lg p-3 -mx-1 hover:bg-slate-700/30 transition-colors">
+              <a href="#/patterns/{pattern.id}" class="block rounded-lg p-3 -mx-1 hover:bg-slate-700/30 transition-colors">
                 <div class="flex items-center justify-between mb-2">
                   <span class="text-sm font-medium text-slate-200">{pattern.id}</span>
                   <span class="text-xs text-slate-500">{formatDate(pattern.stats.last_used)}</span>

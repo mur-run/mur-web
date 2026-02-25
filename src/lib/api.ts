@@ -125,11 +125,48 @@ export async function deletePattern(id: string): Promise<void> {
 
 // --- Workflow API ---
 
+let demoWorkflows = [...mockWorkflows];
+
 export async function getWorkflows(): Promise<Workflow[]> {
   try {
     return await apiGet<Workflow[]>('/workflows');
   } catch {
-    return mockWorkflows;
+    return demoWorkflows;
+  }
+}
+
+export async function createWorkflow(wf: Omit<Workflow, 'id' | 'created' | 'updated'>): Promise<Workflow> {
+  try {
+    return await apiPost<Workflow>('/workflows', wf);
+  } catch {
+    const newWf: Workflow = {
+      ...wf,
+      id: `workflow-${Date.now()}`,
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+    };
+    demoWorkflows = [...demoWorkflows, newWf];
+    return newWf;
+  }
+}
+
+export async function updateWorkflow(id: string, wf: Partial<Workflow>): Promise<Workflow> {
+  try {
+    return await apiPut<Workflow>(`/workflows/${id}`, wf);
+  } catch {
+    const idx = demoWorkflows.findIndex(w => w.id === id);
+    if (idx === -1) throw new Error('Workflow not found');
+    const updated = { ...demoWorkflows[idx], ...wf, updated: new Date().toISOString() };
+    demoWorkflows = [...demoWorkflows.slice(0, idx), updated, ...demoWorkflows.slice(idx + 1)];
+    return updated;
+  }
+}
+
+export async function deleteWorkflow(id: string): Promise<void> {
+  try {
+    await apiDelete(`/workflows/${id}`);
+  } catch {
+    demoWorkflows = demoWorkflows.filter(w => w.id !== id);
   }
 }
 

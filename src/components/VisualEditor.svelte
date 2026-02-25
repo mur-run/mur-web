@@ -218,7 +218,7 @@
         <span class="block text-xs font-medium text-slate-400 mb-2 uppercase tracking-wider">Related Patterns</span>
         <div class="space-y-1">
           {#each pattern.related as rel}
-            <a href="/patterns/{rel}" class="block rounded-md px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-emerald-400 transition-colors">
+            <a href="#/patterns/{rel}" class="block rounded-md px-2 py-1.5 text-sm text-slate-300 hover:bg-slate-700/50 hover:text-emerald-400 transition-colors">
               {rel}
             </a>
           {/each}

@@ -145,7 +145,7 @@
   <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
     {#each filtered as pattern}
       <a
-        href="/patterns/{pattern.id}"
+        href="#/patterns/{pattern.id}"
         class="group rounded-lg border border-slate-700/50 bg-slate-800 p-4 hover:border-slate-600 hover:bg-slate-800/80 transition-all"
       >
         <div class="flex items-start justify-between gap-2 mb-2">
