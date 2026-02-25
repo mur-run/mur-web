@@ -8,6 +8,8 @@
   import Import from './routes/Import.svelte';
   import Workflows from './routes/Workflows.svelte';
   import Settings from './routes/Settings.svelte';
+  import Search from './routes/Search.svelte';
+  import Graph from './routes/Graph.svelte';
 
   let sidebarCollapsed = $state(false);
   let searchQuery = $state('');
@@ -37,6 +39,7 @@
     { path: '/', label: 'Dashboard', icon: 'grid' },
     { path: '/patterns', label: 'Patterns', icon: 'layers' },
     { path: '/import', label: 'Import', icon: 'upload' },
+    { path: '/graph', label: 'Graph', icon: 'share' },
     { path: '/workflows', label: 'Workflows', icon: 'git-branch' },
     { path: '/settings', label: 'Settings', icon: 'settings' },
   ];
@@ -47,6 +50,7 @@
       layers: 'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5',
       'git-branch': 'M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm12-8a9 9 0 0 1-9 9',
       upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
+      share: 'M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98M21 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM9 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm12 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
       settings: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
     };
     return icons[icon] || '';
@@ -59,6 +63,7 @@
 
   // Route matching
   const routeParams = $derived(matchRoute('/patterns/:id', currentRoute));
+  const searchParams = $derived(matchRoute('/search/:query', currentRoute));
 </script>
 
 <div class="flex h-screen overflow-hidden bg-slate-900">
@@ -110,8 +115,9 @@
         </svg>
         <input
           type="text"
-          placeholder="Search patterns..."
+          placeholder="Search patterns & workflows..."
           bind:value={searchQuery}
+          onkeydown={(e: KeyboardEvent) => { if (e.key === 'Enter' && searchQuery.trim()) navigate('/search/' + encodeURIComponent(searchQuery.trim())); }}
           class="w-full rounded-lg border border-slate-700 bg-slate-800 py-1.5 pl-10 pr-3 text-sm text-slate-200 placeholder-slate-500 outline-none transition-colors focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/25"
         />
       </div>
@@ -132,10 +138,14 @@
         <NewPattern />
       {:else if currentRoute === '/import'}
         <Import />
+      {:else if currentRoute === '/graph'}
+        <Graph />
       {:else if currentRoute === '/workflows'}
         <Workflows />
       {:else if currentRoute === '/settings'}
         <Settings />
+      {:else if searchParams}
+        <Search query={decodeURIComponent(searchParams.query)} />
       {:else if routeParams}
         <PatternEditor id={routeParams.id} />
       {:else}
