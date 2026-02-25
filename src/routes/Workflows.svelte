@@ -18,6 +18,7 @@
   let editSteps = $state<string[]>([]);
 
   $effect(() => {
+    if (!store.isLoaded()) store.load();
     workflows = store.getWorkflows();
     const unsub = store.subscribe(() => { workflows = store.getWorkflows(); });
     return unsub;

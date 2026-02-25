@@ -11,6 +11,7 @@
   let workflows = $state<Workflow[]>([]);
 
   $effect(() => {
+    if (!store.isLoaded()) store.load();
     patterns = store.getPatterns();
     workflows = store.getWorkflows();
     const unsub = store.subscribe(() => {

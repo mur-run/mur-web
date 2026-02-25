@@ -13,6 +13,7 @@
   let recentPatterns = $state<Pattern[]>([]);
 
   $effect(() => {
+    if (!store.isLoaded()) store.load();
     loadData();
     const unsub = store.subscribe(() => loadData());
     return unsub;

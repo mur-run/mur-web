@@ -17,6 +17,7 @@
   let selectMode = $state(false);
 
   $effect(() => {
+    if (!store.isLoaded()) store.load();
     allPatterns = store.getPatterns();
     const unsub = store.subscribe(() => { allPatterns = store.getPatterns(); });
     return unsub;

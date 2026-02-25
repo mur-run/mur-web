@@ -36,6 +36,7 @@
   };
 
   $effect(() => {
+    if (!store.isLoaded()) store.load();
     patterns = store.getPatterns().filter(p => !p.archived);
     buildGraph();
     const unsub = store.subscribe(() => {
