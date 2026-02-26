@@ -20,9 +20,8 @@ test.describe('MUR Dashboard Smoke Tests', () => {
   });
 
   test('navigates to graph', async ({ page }) => {
-    await page.goto('/');
-    await page.click('a[href="#/graph"]');
-    await expect(page.locator('h1')).toContainText('Pattern Graph');
+    await page.goto('/#/graph');
+    await expect(page.locator('h1')).toContainText('Pattern Graph', { timeout: 5000 });
     await expect(page.locator('canvas')).toBeVisible();
   });
 

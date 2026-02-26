@@ -1,5 +1,6 @@
 import type { Pattern, Workflow, DashboardStats, DataSource } from './types';
 import { mockPatterns, mockWorkflows } from './mock-data';
+import { adaptPattern, adaptWorkflow, unwrapList, unwrapOne } from './adapter';
 
 let dataSource: DataSource = 'demo';
 let baseUrl = '';
@@ -74,12 +75,14 @@ let demoPatterns = [...mockPatterns];
 
 export async function getPatterns(): Promise<Pattern[]> {
   if (dataSource === 'demo') return demoPatterns;
-  return apiGet<Pattern[]>('/patterns');
+  const raw = await apiGet<unknown>('/patterns');
+  return unwrapList(raw).map(adaptPattern);
 }
 
 export async function getPattern(id: string): Promise<Pattern | undefined> {
   if (dataSource === 'demo') return demoPatterns.find(p => p.id === id);
-  return apiGet<Pattern>(`/patterns/${id}`);
+  const raw = await apiGet<unknown>(`/patterns/${id}`);
+  return adaptPattern(unwrapOne(raw));
 }
 
 export async function createPattern(pattern: Omit<Pattern, 'id' | 'stats'>): Promise<Pattern> {
@@ -120,7 +123,8 @@ let demoWorkflows = [...mockWorkflows];
 
 export async function getWorkflows(): Promise<Workflow[]> {
   if (dataSource === 'demo') return demoWorkflows;
-  return apiGet<Workflow[]>('/workflows');
+  const raw = await apiGet<unknown>('/workflows');
+  return unwrapList(raw).map(adaptWorkflow);
 }
 
 export async function createWorkflow(wf: Omit<Workflow, 'id' | 'created' | 'updated'>): Promise<Workflow> {
