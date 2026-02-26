@@ -15,6 +15,7 @@
   import CommandPalette from './components/CommandPalette.svelte';
   import { showToast } from './lib/toast';
   import { load as loadData, refresh as refreshData, isLoaded } from './lib/dataStore';
+  import { initTheme, toggleTheme, getTheme, onThemeChange } from './lib/theme';
 
   let sidebarCollapsed = $state(false);
   let mobileMenuOpen = $state(false);
@@ -22,7 +23,14 @@
   let dataSource = $state<'local' | 'cloud' | 'demo'>('demo');
   let wsConnected = $state(false);
   let loading = $state(true);
+  let theme = $state(getTheme());
   let currentRoute = $state(getCurrentRoute());
+
+  $effect(() => {
+    initTheme();
+    const themeUnsub = onThemeChange(t => theme = t);
+    return themeUnsub;
+  });
 
   $effect(() => {
     detectBackend().then(source => {
@@ -183,6 +191,18 @@
       </div>
 
       <div class="flex items-center gap-3">
+        <button
+          onclick={toggleTheme}
+          class="rounded-lg p-1.5 text-slate-400 hover:text-slate-200 transition-colors"
+          title="Toggle theme"
+          aria-label="Toggle theme"
+        >
+          {#if theme === 'dark'}
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          {:else}
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          {/if}
+        </button>
         {#if dataSource !== 'demo' && wsConnected}
           <span class="flex items-center gap-1.5 text-xs text-emerald-400" title="Real-time connected">
             <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>

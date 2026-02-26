@@ -1,10 +1,12 @@
 <script lang="ts">
   import { getDataSource, setDataSource, detectBackend, getPatterns, getWorkflows } from '../lib/api';
+  import { getTheme, onThemeChange } from '../lib/theme';
   import type { DataSource } from '../lib/types';
 
   let currentSource = $state<DataSource>(getDataSource());
   let localUrl = $state('http://localhost:3847');
   let cloudUrl = $state('https://mur-server.fly.dev');
+  let currentTheme = $state(getTheme());
   let testStatus = $state<'idle' | 'testing' | 'ok' | 'fail'>('idle');
   let testMessage = $state('');
   let patternCount = $state(0);
@@ -12,6 +14,8 @@
 
   $effect(() => {
     refreshCounts();
+    const unsub = onThemeChange(t => currentTheme = t);
+    return unsub;
   });
 
   async function refreshCounts() {
@@ -186,11 +190,22 @@
     </div>
   </section>
 
-  <!-- Theme (placeholder) -->
+  <!-- Theme -->
   <section class="space-y-3">
     <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Theme</h2>
-    <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4">
-      <p class="text-sm text-slate-500">Theme customization coming soon. Currently using dark mode.</p>
+    <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 flex items-center gap-4">
+      <button
+        onclick={() => { import('../lib/theme').then(m => m.setTheme('dark')); }}
+        class="rounded-lg border px-4 py-2 text-sm transition-colors {currentTheme === 'dark' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-slate-700 text-slate-400 hover:text-slate-200'}"
+      >
+        🌙 Dark
+      </button>
+      <button
+        onclick={() => { import('../lib/theme').then(m => m.setTheme('light')); }}
+        class="rounded-lg border px-4 py-2 text-sm transition-colors {currentTheme === 'light' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-slate-700 text-slate-400 hover:text-slate-200'}"
+      >
+        ☀️ Light
+      </button>
     </div>
   </section>
 
