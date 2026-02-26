@@ -61,14 +61,23 @@
       if (label) showToast(`${label}: ${evt.id}`, 'success');
     });
 
-    const onHashChange = () => {
-      currentRoute = getCurrentRoute();
-    };
-    window.addEventListener('hashchange', onHashChange);
     return () => {
-      window.removeEventListener('hashchange', onHashChange);
       unsub();
       disconnect();
+    };
+  });
+
+  // Hash routing
+  $effect(() => {
+    const id = setInterval(() => {
+      const r = getCurrentRoute();
+      if (r !== currentRoute) currentRoute = r;
+    }, 50);
+    const onHashChange = () => { currentRoute = getCurrentRoute(); };
+    window.addEventListener('hashchange', onHashChange);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener('hashchange', onHashChange);
     };
   });
 
@@ -224,7 +233,7 @@
     {/if}
 
     <!-- Content area -->
-    <main class="flex-1 overflow-auto p-6">
+    <main class="flex-1 overflow-auto p-6" data-route={currentRoute}>
       {#if currentRoute === '/' || currentRoute === ''}
         <Dashboard />
       {:else if currentRoute === '/patterns'}

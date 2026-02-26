@@ -35,32 +35,45 @@
     Canonical: '#818cf8',
   };
 
-  $effect(() => {
+  // Use onMount pattern to avoid effect dependency issues
+  import { onMount, onDestroy } from 'svelte';
+
+  let unsub: (() => void) | null = null;
+  let ro: ResizeObserver | null = null;
+
+  onMount(() => {
     if (!store.isLoaded()) store.load();
     patterns = store.getPatterns().filter(p => !p.archived);
     buildGraph();
-    const unsub = store.subscribe(() => {
+
+    unsub = store.subscribe(() => {
       patterns = store.getPatterns().filter(p => !p.archived);
       buildGraph();
+      if (canvasEl && nodes.length > 0) {
+        cancelAnimationFrame(animId);
+        startSimulation();
+      }
     });
-    return unsub;
+
+    // Wait for canvas to be available
+    requestAnimationFrame(() => {
+      if (canvasEl && nodes.length > 0) {
+        startSimulation();
+        ro = new ResizeObserver(() => {
+          if (canvasEl) {
+            cancelAnimationFrame(animId);
+            startSimulation();
+          }
+        });
+        ro.observe(canvasEl);
+      }
+    });
   });
 
-  $effect(() => {
-    if (canvasEl && nodes.length > 0) {
-      startSimulation();
-
-      // Fix #4: handle resize
-      const ro = new ResizeObserver(() => {
-        if (canvasEl) {
-          cancelAnimationFrame(animId);
-          startSimulation();
-        }
-      });
-      ro.observe(canvasEl);
-      return () => { cancelAnimationFrame(animId); ro.disconnect(); };
-    }
-    return () => { cancelAnimationFrame(animId); };
+  onDestroy(() => {
+    unsub?.();
+    cancelAnimationFrame(animId);
+    ro?.disconnect();
   });
 
   function buildGraph() {
@@ -223,7 +236,10 @@
         }
       }
 
-      animId = requestAnimationFrame(tick);
+      // Only continue animation if component is still mounted
+      if (canvasEl?.isConnected) {
+        animId = requestAnimationFrame(tick);
+      }
     }
 
     tick();

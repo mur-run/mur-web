@@ -61,3 +61,11 @@ test.describe('MUR Dashboard Smoke Tests', () => {
     await expect(page.getByText('error-handling-typescript').first()).toBeVisible();
   });
 });
+
+  test('can navigate away from graph page', async ({ page }) => {
+    await page.goto('/#/graph');
+    await expect(page.locator('h1')).toContainText('Pattern Graph', { timeout: 3000 });
+    // Click patterns link in sidebar
+    await page.click('a[href="#/patterns"]');
+    await expect(page.locator('h1')).toContainText('Patterns', { timeout: 3000 });
+  });

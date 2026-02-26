@@ -8,6 +8,6 @@ export default defineConfig({
     reuseExistingServer: true,
   },
   use: {
-    baseURL: 'http://localhost:5173/mur-web/',
+    baseURL: 'http://localhost:5173/',
   },
 });
