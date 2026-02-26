@@ -1,6 +1,7 @@
 <script lang="ts">
   import { navigate } from '../lib/router';
-  import { getPattern, updatePattern } from '../lib/api';
+  import { getPattern } from '../lib/api';
+  import * as store from '../lib/dataStore';
   import type { Pattern } from '../lib/types';
   import VisualEditor from '../components/VisualEditor.svelte';
   import SourceEditor from '../components/SourceEditor.svelte';
@@ -47,7 +48,7 @@
     if (!pattern) return;
     saving = true;
     try {
-      await updatePattern(pattern.id, pattern);
+      await store.updatePattern(pattern.id, pattern);
       originalPattern = structuredClone(pattern);
       hasChanges = false;
       showDiff = false;
