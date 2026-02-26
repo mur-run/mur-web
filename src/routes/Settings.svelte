@@ -209,6 +209,23 @@
     </div>
   </section>
 
+  <!-- Keyboard Shortcuts -->
+  <section class="space-y-3">
+    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Keyboard Shortcuts</h2>
+    <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4">
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div class="flex items-center gap-2"><kbd class="rounded bg-slate-700 px-1.5 py-0.5 border border-slate-600 text-slate-400">⌘K</kbd> <span class="text-slate-400">Command palette</span></div>
+        <div class="flex items-center gap-2"><kbd class="rounded bg-slate-700 px-1.5 py-0.5 border border-slate-600 text-slate-400">/</kbd> <span class="text-slate-400">Focus search</span></div>
+        <div class="flex items-center gap-2"><kbd class="rounded bg-slate-700 px-1.5 py-0.5 border border-slate-600 text-slate-400">t</kbd> <span class="text-slate-400">Toggle theme</span></div>
+        <div class="flex items-center gap-2"><kbd class="rounded bg-slate-700 px-1.5 py-0.5 border border-slate-600 text-slate-400">g d</kbd> <span class="text-slate-400">Go to Dashboard</span></div>
+        <div class="flex items-center gap-2"><kbd class="rounded bg-slate-700 px-1.5 py-0.5 border border-slate-600 text-slate-400">g p</kbd> <span class="text-slate-400">Go to Patterns</span></div>
+        <div class="flex items-center gap-2"><kbd class="rounded bg-slate-700 px-1.5 py-0.5 border border-slate-600 text-slate-400">g g</kbd> <span class="text-slate-400">Go to Graph</span></div>
+        <div class="flex items-center gap-2"><kbd class="rounded bg-slate-700 px-1.5 py-0.5 border border-slate-600 text-slate-400">g w</kbd> <span class="text-slate-400">Go to Workflows</span></div>
+        <div class="flex items-center gap-2"><kbd class="rounded bg-slate-700 px-1.5 py-0.5 border border-slate-600 text-slate-400">g s</kbd> <span class="text-slate-400">Go to Settings</span></div>
+      </div>
+    </div>
+  </section>
+
   <!-- About -->
   <section class="space-y-3">
     <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">About</h2>
