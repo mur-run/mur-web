@@ -115,19 +115,21 @@
       <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Connection</h2>
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 space-y-3">
         <div>
-          <label class="text-xs text-slate-400 block mb-1">
+          <span class="text-xs text-slate-400 block mb-1">
             {currentSource === 'local' ? 'Local Backend URL' : 'Cloud Backend URL'}
-          </label>
+          </span>
           {#if currentSource === 'local'}
             <input
               type="text"
               bind:value={localUrl}
+              aria-label="Local Backend URL"
               class="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/50 transition-colors font-mono"
             />
           {:else}
             <input
               type="text"
               bind:value={cloudUrl}
+              aria-label="Cloud Backend URL"
               class="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/50 transition-colors font-mono"
             />
           {/if}
