@@ -4,8 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [svelte(), tailwindcss()],
-  // Use '/mur-web/' for GitHub Pages, '/' for custom domain or mur serve
-  base: process.env.MUR_BASE_PATH || '/mur-web/',
+  // Custom domain (dashboard.mur.run) uses '/', override with MUR_BASE_PATH if needed
+  base: process.env.MUR_BASE_PATH || '/',
   build: {
     chunkSizeWarningLimit: 600,
     rollupOptions: {
