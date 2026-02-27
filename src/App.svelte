@@ -11,6 +11,8 @@
   import Settings from './routes/Settings.svelte';
   import Search from './routes/Search.svelte';
   import Graph from './routes/Graph.svelte';
+  import Commander from './routes/Commander.svelte';
+  import CommanderExecution from './routes/CommanderExecution.svelte';
   import Toast from './components/Toast.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import { showToast } from './lib/toast';
@@ -94,6 +96,7 @@
     { path: '/import', label: 'Import', icon: 'upload' },
     { path: '/graph', label: 'Graph', icon: 'share' },
     { path: '/workflows', label: 'Workflows', icon: 'git-branch' },
+    { path: '/commander', label: 'Commander', icon: 'zap' },
     { path: '/settings', label: 'Settings', icon: 'settings' },
   ];
 
@@ -246,6 +249,10 @@
         <Graph />
       {:else if currentRoute === '/workflows'}
         <Workflows />
+      {:else if currentRoute === '/commander'}
+        <Commander />
+      {:else if currentRoute.startsWith('/commander/execution/')}
+        <CommanderExecution />
       {:else if currentRoute === '/settings'}
         <Settings />
       {:else if searchParams}
