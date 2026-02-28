@@ -13,11 +13,15 @@
   import Graph from './routes/Graph.svelte';
   import Commander from './routes/Commander.svelte';
   import CommanderExecution from './routes/CommanderExecution.svelte';
+  import CommanderWorkflows from './routes/CommanderWorkflows.svelte';
+  import CommanderWorkflowDetail from './routes/CommanderWorkflowDetail.svelte';
+  import AuditLog from './routes/AuditLog.svelte';
   import Toast from './components/Toast.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import { showToast } from './lib/toast';
   import { load as loadData, refresh as refreshData, isLoaded } from './lib/dataStore';
   import { initTheme, toggleTheme, getTheme, onThemeChange } from './lib/theme';
+  import { detectCommander, isCommanderConnected } from './lib/commander';
 
   let sidebarCollapsed = $state(false);
   let mobileMenuOpen = $state(false);
@@ -25,6 +29,7 @@
   let dataSource = $state<'local' | 'cloud' | 'demo'>('demo');
   let wsConnected = $state(false);
   let loading = $state(true);
+  let commanderAvailable = $state(false);
   let theme = $state(getTheme());
   let currentRoute = $state(getCurrentRoute());
 
@@ -38,19 +43,18 @@
     detectBackend().then(source => {
       dataSource = source;
       loading = true;
-      loadData().finally(() => loading = false); // Initial data fetch into shared store
+      loadData().finally(() => loading = false);
       if (source === 'local') {
         connect('http://localhost:3847');
       } else if (source === 'cloud') {
         connect('https://mur-server.fly.dev');
       }
     });
+    detectCommander().then(ok => { commanderAvailable = ok; });
 
     const unsub = onEvent((evt) => {
       wsConnected = isConnected();
-      // Refetch data from backend on any mutation event (#2)
       refreshData();
-      // Show toast
       const labels: Record<string, string> = {
         'pattern:created': '✨ Pattern created',
         'pattern:updated': '📝 Pattern updated',
@@ -96,8 +100,13 @@
     { path: '/import', label: 'Import', icon: 'upload' },
     { path: '/graph', label: 'Graph', icon: 'share' },
     { path: '/workflows', label: 'Workflows', icon: 'git-branch' },
-    { path: '/commander', label: 'Commander', icon: 'zap' },
     { path: '/settings', label: 'Settings', icon: 'settings' },
+  ];
+
+  const commanderNavItems = [
+    { path: '/commander', label: 'Commander', icon: 'zap' },
+    { path: '/commander/workflows', label: 'Cmd Workflows', icon: 'terminal' },
+    { path: '/commander/audit', label: 'Audit Log', icon: 'file-text' },
   ];
 
   function getNavIcon(icon: string): string {
@@ -108,6 +117,9 @@
       upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
       share: 'M8.59 13.51l6.83 3.98M15.41 6.51l-6.82 3.98M21 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0zM9 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm12 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z',
       settings: 'M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z',
+      zap: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
+      terminal: 'M4 17l6-5-6-5M12 19h8',
+      'file-text': 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
     };
     return icons[icon] || '';
   }
@@ -120,6 +132,8 @@
   // Route matching
   const routeParams = $derived(matchRoute('/patterns/:id', currentRoute));
   const searchParams = $derived(matchRoute('/search/:query', currentRoute));
+  const cmdWorkflowParams = $derived(matchRoute('/commander/workflows/:id', currentRoute));
+  const cmdExecParams = $derived(matchRoute('/commander/exec/:id', currentRoute));
 </script>
 
 <div class="flex h-screen overflow-hidden bg-slate-900">
@@ -151,6 +165,30 @@
 
     <nav class="flex-1 space-y-1 p-2">
       {#each navItems as item}
+        <a
+          href="#{item.path}"
+          onclick={() => mobileMenuOpen = false}
+          class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors {isActive(item.path) ? 'bg-slate-800 text-emerald-400' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}"
+        >
+          <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d={getNavIcon(item.icon)} />
+          </svg>
+          {#if !sidebarCollapsed}
+            <span>{item.label}</span>
+          {/if}
+        </a>
+      {/each}
+
+      <!-- Commander section -->
+      {#if !sidebarCollapsed}
+        <div class="pt-3 pb-1 px-3">
+          <span class="text-[10px] font-semibold uppercase tracking-wider {commanderAvailable ? 'text-slate-500' : 'text-slate-600'}">Commander</span>
+          {#if commanderAvailable}
+            <span class="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          {/if}
+        </div>
+      {/if}
+      {#each commanderNavItems as item}
         <a
           href="#{item.path}"
           onclick={() => mobileMenuOpen = false}
@@ -225,6 +263,12 @@
           <span>{dataSourceIcon}</span>
           <span class="text-slate-400">{dataSourceLabel}</span>
         </div>
+        {#if commanderAvailable}
+          <div class="flex items-center gap-1.5 rounded-full bg-slate-800 px-3 py-1 text-xs" title="Commander connected on :3939">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span class="text-slate-400">Cmd</span>
+          </div>
+        {/if}
       </div>
     </header>
 
@@ -251,8 +295,14 @@
         <Workflows />
       {:else if currentRoute === '/commander'}
         <Commander />
-      {:else if currentRoute.startsWith('/commander/execution/')}
-        <CommanderExecution />
+      {:else if currentRoute === '/commander/workflows'}
+        <CommanderWorkflows />
+      {:else if currentRoute === '/commander/audit'}
+        <AuditLog />
+      {:else if cmdWorkflowParams}
+        <CommanderWorkflowDetail id={decodeURIComponent(cmdWorkflowParams.id)} />
+      {:else if cmdExecParams}
+        <CommanderExecution id={cmdExecParams.id} />
       {:else if currentRoute === '/settings'}
         <Settings />
       {:else if searchParams}
