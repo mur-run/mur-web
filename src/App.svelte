@@ -16,6 +16,8 @@
   import CommanderWorkflows from './routes/CommanderWorkflows.svelte';
   import CommanderWorkflowDetail from './routes/CommanderWorkflowDetail.svelte';
   import AuditLog from './routes/AuditLog.svelte';
+  import Sessions from './routes/Sessions.svelte';
+  import SessionReview from './routes/SessionReview.svelte';
   import Toast from './components/Toast.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import { showToast } from './lib/toast';
@@ -100,6 +102,7 @@
     { path: '/import', label: 'Import', icon: 'upload' },
     { path: '/graph', label: 'Graph', icon: 'share' },
     { path: '/workflows', label: 'Workflows', icon: 'git-branch' },
+    { path: '/sessions', label: 'Sessions', icon: 'clock' },
     { path: '/settings', label: 'Settings', icon: 'settings' },
   ];
 
@@ -120,6 +123,7 @@
       zap: 'M13 2L3 14h9l-1 8 10-12h-9l1-8z',
       terminal: 'M4 17l6-5-6-5M12 19h8',
       'file-text': 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
+      clock: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 6v6l4 2',
     };
     return icons[icon] || '';
   }
@@ -132,6 +136,7 @@
   // Route matching
   const routeParams = $derived(matchRoute('/patterns/:id', currentRoute));
   const searchParams = $derived(matchRoute('/search/:query', currentRoute));
+  const sessionReviewParams = $derived(matchRoute('/sessions/:id/review', currentRoute));
   const cmdWorkflowParams = $derived(matchRoute('/commander/workflows/:id', currentRoute));
   const cmdExecParams = $derived(matchRoute('/commander/exec/:id', currentRoute));
 </script>
@@ -293,6 +298,10 @@
         <Graph />
       {:else if currentRoute === '/workflows'}
         <Workflows />
+      {:else if currentRoute === '/sessions'}
+        <Sessions />
+      {:else if sessionReviewParams}
+        <SessionReview id={sessionReviewParams.id} />
       {:else if currentRoute === '/commander'}
         <Commander />
       {:else if currentRoute === '/commander/workflows'}

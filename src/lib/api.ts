@@ -1,4 +1,4 @@
-import type { Pattern, Workflow, DashboardStats, DataSource } from './types';
+import type { Pattern, Workflow, DashboardStats, DataSource, Session, SessionDetail } from './types';
 import { mockPatterns, mockWorkflows } from './mock-data';
 import { adaptPattern, adaptWorkflow, unwrapList, unwrapOne } from './adapter';
 
@@ -153,6 +153,18 @@ export async function deleteWorkflow(id: string): Promise<void> {
     return;
   }
   await apiDelete(`/workflows/${id}`);
+}
+
+// --- Session API ---
+
+export async function getSessions(): Promise<Session[]> {
+  const raw = await apiGet<{ data: Session[] }>('/sessions');
+  return raw.data;
+}
+
+export async function getSession(id: string): Promise<SessionDetail> {
+  const raw = await apiGet<{ data: SessionDetail }>(`/sessions/${id}`);
+  return raw.data;
 }
 
 // --- Dashboard API ---

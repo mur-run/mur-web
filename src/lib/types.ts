@@ -47,6 +47,24 @@ export interface DashboardStats {
   maturityDistribution: Record<Maturity, number>;
 }
 
+export interface Session {
+  id: string;
+  event_count: number;
+  file_size: number;
+  modified_at: string;
+}
+
+export interface SessionEvent {
+  timestamp: number;
+  type: string;
+  tool?: string;
+  content: string;
+}
+
+export interface SessionDetail extends Session {
+  events: SessionEvent[];
+}
+
 export interface PatternTemplate {
   name: string;
   icon: string;
