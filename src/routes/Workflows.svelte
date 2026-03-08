@@ -7,7 +7,10 @@
   let _i18n = $state(0);
   $effect(() => {
     const unsub = i18nSubscribe(() => _i18n++);
-    return unsub;
+    return () => {
+      unsub();
+      if (searchTimeout) clearTimeout(searchTimeout);
+    };
   });
 
   let workflows = $state<Workflow[]>([]);

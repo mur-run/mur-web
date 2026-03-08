@@ -215,23 +215,7 @@ export async function getSession(id: string): Promise<SessionDetail> {
 
 export async function extractWorkflowFromSession(sessionId: string): Promise<Workflow> {
   const raw = await apiPost<unknown>(`/workflows/extract-from-session/${sessionId}`, {});
-  const data = unwrapOne(raw) as any;
-  return {
-    id: data.name || '',
-    name: data.name || '',
-    description: data.description || '',
-    steps: (data.steps || []).map((s: any) => s.description || s.name || ''),
-    tools: data.tools || [],
-    variables: (data.variables || []).map((v: any) => ({
-      name: v.name || '',
-      type: v.type || 'string',
-      required: v.required || false,
-      default_value: v.default_value || '',
-      description: v.description || '',
-    })),
-    created: data.created_at || new Date().toISOString(),
-    updated: data.updated_at || new Date().toISOString(),
-  };
+  return adaptWorkflow(unwrapOne(raw) as any);
 }
 
 // --- Dashboard API ---
