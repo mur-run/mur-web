@@ -5,6 +5,10 @@ import { adaptPattern, adaptWorkflow, unwrapList, unwrapOne } from './adapter';
 let dataSource: DataSource = 'demo';
 let baseUrl = '';
 
+// Backend detection promise — other API calls wait on this
+let backendReady: Promise<DataSource> | null = null;
+let backendResolved = false;
+
 export function getDataSource(): DataSource {
   return dataSource;
 }
@@ -17,17 +21,31 @@ export function setDataSource(source: DataSource) {
 }
 
 export async function detectBackend(): Promise<DataSource> {
+  if (backendReady) return backendReady;
+  backendReady = doDetectBackend();
+  return backendReady;
+}
+
+async function doDetectBackend(): Promise<DataSource> {
   try {
     const res = await fetch('http://localhost:3847/api/v1/health', { signal: AbortSignal.timeout(2000) });
     if (res.ok) {
       setDataSource('local');
+      backendResolved = true;
       return 'local';
     }
   } catch {
     // local not available
   }
   setDataSource('demo');
+  backendResolved = true;
   return 'demo';
+}
+
+/** Wait for backend detection before making API calls */
+async function ensureBackend(): Promise<void> {
+  if (backendResolved) return;
+  if (backendReady) await backendReady;
 }
 
 function apiPath(path: string): string {
@@ -35,6 +53,7 @@ function apiPath(path: string): string {
 }
 
 async function apiGet<T>(path: string): Promise<T> {
+  await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
   const res = await fetch(`${baseUrl}${apiPath(path)}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
@@ -42,6 +61,7 @@ async function apiGet<T>(path: string): Promise<T> {
 }
 
 async function apiPost<T>(path: string, body: unknown): Promise<T> {
+  await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
   const res = await fetch(`${baseUrl}${apiPath(path)}`, {
     method: 'POST',
@@ -53,6 +73,7 @@ async function apiPost<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function apiPut<T>(path: string, body: unknown): Promise<T> {
+  await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
   const res = await fetch(`${baseUrl}${apiPath(path)}`, {
     method: 'PUT',
@@ -64,6 +85,7 @@ async function apiPut<T>(path: string, body: unknown): Promise<T> {
 }
 
 async function apiDelete(path: string): Promise<void> {
+  await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
   const res = await fetch(`${baseUrl}${apiPath(path)}`, { method: 'DELETE' });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
