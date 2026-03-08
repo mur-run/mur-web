@@ -191,6 +191,21 @@ export async function getSession(id: string): Promise<SessionDetail> {
   return raw.data;
 }
 
+// --- Extract Workflow from Session ---
+
+export async function extractWorkflowFromSession(sessionId: string): Promise<Workflow> {
+  const raw = await apiPost<unknown>(`/workflows/extract-from-session/${sessionId}`, {});
+  const data = unwrapOne(raw) as any;
+  return {
+    id: data.name || '',
+    name: data.name || '',
+    description: data.description || '',
+    steps: (data.steps || []).map((s: any) => s.description || s.name || ''),
+    created: data.created_at || new Date().toISOString(),
+    updated: data.updated_at || new Date().toISOString(),
+  };
+}
+
 // --- Dashboard API ---
 
 export async function getDashboardStats(): Promise<DashboardStats> {

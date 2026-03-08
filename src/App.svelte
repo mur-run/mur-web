@@ -8,6 +8,7 @@
   import NewPattern from './routes/NewPattern.svelte';
   import Import from './routes/Import.svelte';
   import Workflows from './routes/Workflows.svelte';
+  import WorkflowEditor from './routes/WorkflowEditor.svelte';
   import Settings from './routes/Settings.svelte';
   import Search from './routes/Search.svelte';
   import Graph from './routes/Graph.svelte';
@@ -139,6 +140,7 @@
   const sessionReviewParams = $derived(matchRoute('/sessions/:id/review', currentRoute));
   const cmdWorkflowParams = $derived(matchRoute('/commander/workflows/:id', currentRoute));
   const cmdExecParams = $derived(matchRoute('/commander/exec/:id', currentRoute));
+  const workflowEditParams = $derived(matchRoute('/workflows/:id/edit', currentRoute));
 </script>
 
 <div class="flex h-screen overflow-hidden bg-slate-900">
@@ -184,29 +186,29 @@
         </a>
       {/each}
 
-      <!-- Commander section -->
-      {#if !sidebarCollapsed}
-        <div class="pt-3 pb-1 px-3">
-          <span class="text-[10px] font-semibold uppercase tracking-wider {commanderAvailable ? 'text-slate-500' : 'text-slate-600'}">Commander</span>
-          {#if commanderAvailable}
+      <!-- Commander section (only shown when commander is detected) -->
+      {#if commanderAvailable}
+        {#if !sidebarCollapsed}
+          <div class="pt-3 pb-1 px-3">
+            <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Commander</span>
             <span class="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-          {/if}
-        </div>
+          </div>
+        {/if}
+        {#each commanderNavItems as item}
+          <a
+            href="#{item.path}"
+            onclick={() => mobileMenuOpen = false}
+            class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors {isActive(item.path) ? 'bg-slate-800 text-emerald-400' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}"
+          >
+            <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d={getNavIcon(item.icon)} />
+            </svg>
+            {#if !sidebarCollapsed}
+              <span>{item.label}</span>
+            {/if}
+          </a>
+        {/each}
       {/if}
-      {#each commanderNavItems as item}
-        <a
-          href="#{item.path}"
-          onclick={() => mobileMenuOpen = false}
-          class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors {isActive(item.path) ? 'bg-slate-800 text-emerald-400' : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200'}"
-        >
-          <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d={getNavIcon(item.icon)} />
-          </svg>
-          {#if !sidebarCollapsed}
-            <span>{item.label}</span>
-          {/if}
-        </a>
-      {/each}
     </nav>
 
     <button
@@ -296,6 +298,8 @@
         <Import />
       {:else if currentRoute === '/graph'}
         <Graph />
+      {:else if workflowEditParams}
+        <WorkflowEditor id={decodeURIComponent(workflowEditParams.id)} />
       {:else if currentRoute === '/workflows'}
         <Workflows />
       {:else if currentRoute === '/sessions'}

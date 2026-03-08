@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { getSession } from '../lib/api';
+  import { getSession, extractWorkflowFromSession, createWorkflow } from '../lib/api';
   import { navigate } from '../lib/router';
-  import type { SessionDetail, SessionEvent } from '../lib/types';
+  import type { SessionDetail, SessionEvent, Workflow } from '../lib/types';
 
   let { id }: { id: string } = $props();
 
@@ -9,6 +9,14 @@
   let loading = $state(true);
   let error = $state('');
   let expandedEvents = $state<Set<number>>(new Set());
+
+  // Extract workflow state
+  let extracting = $state(false);
+  let extractedWorkflow = $state<Workflow | null>(null);
+  let editName = $state('');
+  let editDesc = $state('');
+  let editSteps = $state<string[]>([]);
+  let saving = $state(false);
 
   $effect(() => {
     loadSession();
@@ -69,6 +77,57 @@
     else next.add(idx);
     expandedEvents = next;
   }
+
+  async function handleExtract() {
+    extracting = true;
+    error = '';
+    try {
+      const wf = await extractWorkflowFromSession(id);
+      extractedWorkflow = wf;
+      editName = wf.name;
+      editDesc = wf.description;
+      editSteps = [...wf.steps];
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to extract workflow';
+    } finally {
+      extracting = false;
+    }
+  }
+
+  function addStep() { editSteps = [...editSteps, '']; }
+  function removeStep(i: number) { editSteps = editSteps.filter((_, idx) => idx !== i); }
+  function moveStep(i: number, dir: -1 | 1) {
+    const j = i + dir;
+    if (j < 0 || j >= editSteps.length) return;
+    const copy = [...editSteps];
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+    editSteps = copy;
+  }
+
+  async function handleSave() {
+    if (!editName.trim()) return;
+    saving = true;
+    error = '';
+    try {
+      await createWorkflow({
+        name: editName.trim(),
+        description: editDesc.trim(),
+        steps: editSteps.filter(s => s.trim()),
+      });
+      navigate('/workflows');
+    } catch (e) {
+      error = e instanceof Error ? e.message : 'Failed to save workflow';
+    } finally {
+      saving = false;
+    }
+  }
+
+  function cancelExtract() {
+    extractedWorkflow = null;
+    editName = '';
+    editDesc = '';
+    editSteps = [];
+  }
 </script>
 
 <div class="space-y-6">
@@ -80,7 +139,7 @@
     >
       ← Back
     </button>
-    <div>
+    <div class="flex-1">
       <h1 class="text-2xl font-bold text-slate-100">
         Session <span class="font-mono text-emerald-400">{shortId(id)}</span>
       </h1>
@@ -90,7 +149,73 @@
         </p>
       {/if}
     </div>
+    {#if session && !extractedWorkflow}
+      <button
+        onclick={handleExtract}
+        disabled={extracting}
+        class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors"
+      >
+        {extracting ? 'Extracting...' : 'Extract Workflow'}
+      </button>
+    {/if}
   </div>
+
+  <!-- Extracted workflow preview/edit form -->
+  {#if extractedWorkflow}
+    <div class="rounded-lg border border-emerald-500/30 bg-slate-800 p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-emerald-400">Extracted Workflow — Edit before saving</h2>
+        <button onclick={cancelExtract} class="text-xs text-slate-500 hover:text-slate-300 transition-colors">Cancel</button>
+      </div>
+
+      <input
+        type="text"
+        placeholder="Workflow name"
+        bind:value={editName}
+        class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors"
+      />
+      <textarea
+        placeholder="Description"
+        bind:value={editDesc}
+        rows="2"
+        class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors resize-none"
+      ></textarea>
+
+      <div class="space-y-2">
+        <p class="text-xs font-medium text-slate-400">Steps ({editSteps.length})</p>
+        {#each editSteps as step, i}
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-500 w-5 text-right">{i + 1}.</span>
+            <input
+              type="text"
+              bind:value={editSteps[i]}
+              class="flex-1 rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-emerald-500/50 transition-colors"
+            />
+            <button onclick={() => moveStep(i, -1)} disabled={i === 0} class="text-slate-500 hover:text-slate-300 disabled:opacity-30 transition-colors" title="Move up">↑</button>
+            <button onclick={() => moveStep(i, 1)} disabled={i === editSteps.length - 1} class="text-slate-500 hover:text-slate-300 disabled:opacity-30 transition-colors" title="Move down">↓</button>
+            <button onclick={() => removeStep(i)} class="text-red-400 hover:text-red-300 transition-colors" title="Remove">×</button>
+          </div>
+        {/each}
+        <button onclick={addStep} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">+ Add step</button>
+      </div>
+
+      <div class="flex gap-2">
+        <button
+          onclick={handleSave}
+          disabled={saving || !editName.trim()}
+          class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors"
+        >
+          {saving ? 'Saving...' : 'Save Workflow'}
+        </button>
+        <button
+          onclick={cancelExtract}
+          class="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  {/if}
 
   {#if error}
     <div class="rounded-lg border border-rose-500/30 bg-rose-950/30 p-4">
