@@ -201,6 +201,14 @@ export async function extractWorkflowFromSession(sessionId: string): Promise<Wor
     name: data.name || '',
     description: data.description || '',
     steps: (data.steps || []).map((s: any) => s.description || s.name || ''),
+    tools: data.tools || [],
+    variables: (data.variables || []).map((v: any) => ({
+      name: v.name || '',
+      type: v.type || 'string',
+      required: v.required || false,
+      default_value: v.default_value || '',
+      description: v.description || '',
+    })),
     created: data.created_at || new Date().toISOString(),
     updated: data.updated_at || new Date().toISOString(),
   };
