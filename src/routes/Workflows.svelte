@@ -1,6 +1,6 @@
 <script lang="ts">
   import * as store from '../lib/dataStore';
-  import type { Workflow } from '../lib/types';
+  import type { Workflow, WorkflowVariable } from '../lib/types';
 
   let workflows = $state<Workflow[]>([]);
   let showNew = $state(false);
@@ -16,6 +16,10 @@
   let editName = $state('');
   let editDesc = $state('');
   let editSteps = $state<string[]>([]);
+  let editTools = $state<string[]>([]);
+  let editVariables = $state<WorkflowVariable[]>([]);
+
+  const varTypes = ['string', 'url', 'path', 'number', 'bool', 'array'] as const;
 
   $effect(() => {
     if (!store.isLoaded()) store.load();
@@ -55,6 +59,15 @@
     editName = wf.name;
     editDesc = wf.description;
     editSteps = [...wf.steps];
+    editTools = [...(wf.tools || [])];
+    editVariables = (wf.variables || []).map(v => ({ ...v }));
+  }
+
+  function addEditVariable() {
+    editVariables = [...editVariables, { name: '', type: 'string', required: false, default_value: '', description: '' }];
+  }
+  function removeEditVariable(i: number) {
+    editVariables = editVariables.filter((_, idx) => idx !== i);
   }
 
   function addEditStep() { editSteps = [...editSteps, '']; }
@@ -73,6 +86,8 @@
       name: editName.trim(),
       description: editDesc.trim(),
       steps: editSteps.filter(s => s.trim()),
+      tools: editTools,
+      variables: editVariables.filter(v => v.name.trim()),
     });
     editingId = null;
   }
@@ -194,6 +209,55 @@
               class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/50 transition-colors resize-none"
             ></textarea>
 
+            <!-- Tools -->
+            {#if editTools.length > 0}
+              <div>
+                <p class="text-xs font-medium text-slate-400 mb-2">Tools</p>
+                <div class="flex flex-wrap gap-2">
+                  {#each editTools as tool}
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-xs font-medium text-amber-400">
+                      🔧 {tool}
+                    </span>
+                  {/each}
+                </div>
+              </div>
+            {/if}
+
+            <!-- Variables -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <p class="text-xs font-medium text-slate-400">Variables ({editVariables.length})</p>
+                <button onclick={addEditVariable} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">+ Add variable</button>
+              </div>
+              {#if editVariables.length > 0}
+                <div class="space-y-2">
+                  {#each editVariables as variable, i}
+                    <div class="rounded-lg border border-slate-700/50 bg-slate-900/50 px-3 py-2 flex items-center gap-2 flex-wrap">
+                      <input type="text" placeholder="name" bind:value={editVariables[i].name}
+                        class="w-28 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-mono text-slate-200 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors" />
+                      <select bind:value={editVariables[i].type}
+                        class="w-20 rounded border border-slate-700 bg-slate-900 px-1.5 py-1 text-xs text-slate-300 outline-none focus:border-emerald-500/50">
+                        {#each varTypes as vt}<option value={vt}>{vt}</option>{/each}
+                      </select>
+                      <input type="text" placeholder="default" bind:value={editVariables[i].default_value}
+                        class="w-32 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors" />
+                      <input type="text" placeholder="description" bind:value={editVariables[i].description}
+                        class="flex-1 min-w-[120px] rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors" />
+                      <label class="flex items-center gap-1 text-[10px] text-slate-400 cursor-pointer whitespace-nowrap">
+                        <input type="checkbox" bind:checked={editVariables[i].required}
+                          class="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/50 h-3 w-3" />
+                        required
+                      </label>
+                      <button onclick={() => removeEditVariable(i)} class="text-red-400 hover:text-red-300 transition-colors text-xs">×</button>
+                    </div>
+                  {/each}
+                </div>
+              {:else}
+                <p class="text-xs text-slate-600 italic">No variables</p>
+              {/if}
+            </div>
+
+            <!-- Steps -->
             <div class="space-y-2">
               <p class="text-xs font-medium text-slate-400">Steps</p>
               {#each editSteps as step, i}

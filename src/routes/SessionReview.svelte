@@ -279,7 +279,7 @@
                     bind:checked={editVariables[i].required}
                     class="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/50 h-3 w-3"
                   />
-                  req
+                  required
                 </label>
                 <!-- Remove -->
                 <button onclick={() => removeVariable(i)} class="text-red-400 hover:text-red-300 transition-colors text-xs" title="Remove">×</button>

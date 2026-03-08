@@ -87,6 +87,14 @@ export function adaptWorkflow(api: ApiWorkflow): Workflow {
     name: api.name,
     description: api.description,
     steps: api.steps?.map(s => s.description || s.name || '') || [],
+    tools: api.tools || [],
+    variables: (api.variables || []).map((v: any) => ({
+      name: v.name || '',
+      type: v.type || 'string',
+      required: v.required || false,
+      default_value: v.default_value || '',
+      description: v.description || '',
+    })),
     created: api.created_at,
     updated: api.updated_at,
   };
