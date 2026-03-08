@@ -239,54 +239,50 @@
           <button onclick={addVariable} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">+ Add variable</button>
         </div>
         {#if editVariables.length > 0}
-          <div class="space-y-3">
+          <div class="space-y-2">
             {#each editVariables as variable, i}
-              <div class="rounded-lg border border-slate-700/50 bg-slate-900/50 p-3 space-y-2">
-                <div class="flex items-center gap-2">
-                  <!-- Variable name -->
+              <div class="rounded-lg border border-slate-700/50 bg-slate-900/50 px-3 py-2 flex items-center gap-2 flex-wrap">
+                <!-- Name (compact) -->
+                <input
+                  type="text"
+                  placeholder="name"
+                  bind:value={editVariables[i].name}
+                  class="w-28 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-mono text-slate-200 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors"
+                />
+                <!-- Type -->
+                <select
+                  bind:value={editVariables[i].type}
+                  class="w-20 rounded border border-slate-700 bg-slate-900 px-1.5 py-1 text-xs text-slate-300 outline-none focus:border-emerald-500/50"
+                >
+                  {#each varTypes as vt}
+                    <option value={vt}>{vt}</option>
+                  {/each}
+                </select>
+                <!-- Default -->
+                <input
+                  type="text"
+                  placeholder="default"
+                  bind:value={editVariables[i].default_value}
+                  class="w-32 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors"
+                />
+                <!-- Description -->
+                <input
+                  type="text"
+                  placeholder="description"
+                  bind:value={editVariables[i].description}
+                  class="flex-1 min-w-[120px] rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors"
+                />
+                <!-- Required -->
+                <label class="flex items-center gap-1 text-[10px] text-slate-400 cursor-pointer whitespace-nowrap">
                   <input
-                    type="text"
-                    placeholder="variable_name"
-                    bind:value={editVariables[i].name}
-                    class="flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm font-mono text-slate-200 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors"
+                    type="checkbox"
+                    bind:checked={editVariables[i].required}
+                    class="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/50 h-3 w-3"
                   />
-                  <!-- Type selector -->
-                  <select
-                    bind:value={editVariables[i].type}
-                    class="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 outline-none focus:border-emerald-500/50"
-                  >
-                    {#each varTypes as vt}
-                      <option value={vt}>{vt}</option>
-                    {/each}
-                  </select>
-                  <!-- Required toggle -->
-                  <label class="flex items-center gap-1 text-xs text-slate-400 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      bind:checked={editVariables[i].required}
-                      class="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/50"
-                    />
-                    required
-                  </label>
-                  <!-- Remove -->
-                  <button onclick={() => removeVariable(i)} class="text-red-400 hover:text-red-300 transition-colors" title="Remove variable">×</button>
-                </div>
-                <div class="flex items-center gap-2">
-                  <!-- Default value -->
-                  <input
-                    type="text"
-                    placeholder="Default value"
-                    bind:value={editVariables[i].default_value}
-                    class="flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors"
-                  />
-                  <!-- Description -->
-                  <input
-                    type="text"
-                    placeholder="Description"
-                    bind:value={editVariables[i].description}
-                    class="flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors"
-                  />
-                </div>
+                  req
+                </label>
+                <!-- Remove -->
+                <button onclick={() => removeVariable(i)} class="text-red-400 hover:text-red-300 transition-colors text-xs" title="Remove">×</button>
               </div>
             {/each}
           </div>
