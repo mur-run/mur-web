@@ -157,7 +157,8 @@ export async function createWorkflow(wf: Omit<Workflow, 'id' | 'created' | 'upda
     demoWorkflows = [...demoWorkflows, newWf];
     return newWf;
   }
-  return apiPost<Workflow>('/workflows', wf);
+  const raw = await apiPost<unknown>('/workflows', wf);
+  return adaptWorkflow(unwrapOne(raw) as any);
 }
 
 export async function updateWorkflow(id: string, wf: Partial<Workflow>): Promise<Workflow> {
@@ -168,7 +169,8 @@ export async function updateWorkflow(id: string, wf: Partial<Workflow>): Promise
     demoWorkflows = [...demoWorkflows.slice(0, idx), updated, ...demoWorkflows.slice(idx + 1)];
     return updated;
   }
-  return apiPut<Workflow>(`/workflows/${id}`, wf);
+  const raw = await apiPut<unknown>(`/workflows/${id}`, wf);
+  return adaptWorkflow(unwrapOne(raw) as any);
 }
 
 export async function deleteWorkflow(id: string): Promise<void> {
