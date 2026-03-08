@@ -45,7 +45,9 @@ async function doDetectBackend(): Promise<DataSource> {
 /** Wait for backend detection before making API calls */
 async function ensureBackend(): Promise<void> {
   if (backendResolved) return;
-  if (backendReady) await backendReady;
+  // If detectBackend hasn't been called yet, call it now
+  if (!backendReady) backendReady = doDetectBackend();
+  await backendReady;
 }
 
 function apiPath(path: string): string {
