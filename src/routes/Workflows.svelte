@@ -7,6 +7,30 @@
   let editingId = $state<string | null>(null);
   let deleteConfirm = $state<string | null>(null);
 
+  // Search & pagination
+  let searchQuery = $state('');
+  let currentPage = $state(1);
+  const perPage = 10;
+
+  const filtered = $derived.by(() => {
+    if (!searchQuery) return workflows;
+    const q = searchQuery.toLowerCase();
+    return workflows.filter(w =>
+      w.name.toLowerCase().includes(q) ||
+      w.description.toLowerCase().includes(q) ||
+      (w.tools || []).some(t => t.toLowerCase().includes(q))
+    );
+  });
+
+  const totalPages = $derived(Math.max(1, Math.ceil(filtered.length / perPage)));
+  const paged = $derived(filtered.slice((currentPage - 1) * perPage, currentPage * perPage));
+
+  // Reset page when search changes
+  $effect(() => {
+    searchQuery;
+    currentPage = 1;
+  });
+
   // New workflow form
   let newName = $state('');
   let newDesc = $state('');
@@ -102,7 +126,7 @@
   <div class="flex items-center justify-between">
     <div>
       <h1 class="text-2xl font-bold text-slate-100">Workflows</h1>
-      <p class="text-sm text-slate-400 mt-1">{workflows.length} workflows</p>
+      <p class="text-sm text-slate-400 mt-1">{filtered.length} of {workflows.length} workflows</p>
     </div>
     <button
       onclick={() => { showNew = !showNew; }}
@@ -110,6 +134,17 @@
     >
       {showNew ? 'Cancel' : '+ New Workflow'}
     </button>
+  </div>
+
+  <!-- Search -->
+  <div class="relative">
+    <svg class="absolute left-3 top-2.5 h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+    <input
+      type="text"
+      placeholder="Search workflows by name, description, or tool..."
+      bind:value={searchQuery}
+      class="w-full rounded-lg border border-slate-700 bg-slate-800 pl-10 pr-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors"
+    />
   </div>
 
   <!-- New workflow form -->
@@ -160,7 +195,7 @@
 
   <!-- Workflow list -->
   <div class="space-y-3">
-    {#each workflows as wf}
+    {#each paged as wf}
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 transition-all hover:border-slate-600">
         <!-- Header row -->
         <div class="flex items-center justify-between p-4">
@@ -310,7 +345,40 @@
     {/each}
   </div>
 
-  {#if workflows.length === 0 && !showNew}
+  <!-- Pagination -->
+  {#if totalPages > 1}
+    <div class="flex items-center justify-center gap-2 pt-2">
+      <button
+        onclick={() => currentPage = Math.max(1, currentPage - 1)}
+        disabled={currentPage === 1}
+        class="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-600 disabled:opacity-30 transition-colors"
+      >
+        ← Prev
+      </button>
+      {#each Array(totalPages) as _, i}
+        <button
+          onclick={() => currentPage = i + 1}
+          class="rounded-lg px-3 py-1.5 text-xs transition-colors {currentPage === i + 1 ? 'bg-emerald-600 text-white' : 'border border-slate-700 text-slate-400 hover:text-slate-200 hover:border-slate-600'}"
+        >
+          {i + 1}
+        </button>
+      {/each}
+      <button
+        onclick={() => currentPage = Math.min(totalPages, currentPage + 1)}
+        disabled={currentPage === totalPages}
+        class="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-600 disabled:opacity-30 transition-colors"
+      >
+        Next →
+      </button>
+    </div>
+  {/if}
+
+  {#if filtered.length === 0 && searchQuery}
+    <div class="flex flex-col items-center justify-center py-16 text-slate-500">
+      <p class="text-sm">No workflows match "{searchQuery}"</p>
+      <p class="text-xs mt-1">Try a different search term</p>
+    </div>
+  {:else if workflows.length === 0 && !showNew}
     <div class="flex flex-col items-center justify-center py-16 text-slate-500">
       <svg class="h-12 w-12 mb-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm12-8a9 9 0 0 1-9 9" />
