@@ -30,11 +30,21 @@ export interface Pattern {
   archived?: boolean;
 }
 
+export interface WorkflowVariable {
+  name: string;
+  type: 'string' | 'path' | 'url' | 'number' | 'bool' | 'array';
+  required: boolean;
+  default_value?: string;
+  description: string;
+}
+
 export interface Workflow {
   id: string;
   name: string;
   description: string;
   steps: string[];
+  tools?: string[];
+  variables?: WorkflowVariable[];
   created: string;
   updated: string;
 }

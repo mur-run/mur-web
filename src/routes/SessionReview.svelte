@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getSession, extractWorkflowFromSession, createWorkflow } from '../lib/api';
   import { navigate } from '../lib/router';
-  import type { SessionDetail, SessionEvent, Workflow } from '../lib/types';
+  import type { SessionDetail, SessionEvent, Workflow, WorkflowVariable } from '../lib/types';
 
   let { id }: { id: string } = $props();
 
@@ -16,7 +16,11 @@
   let editName = $state('');
   let editDesc = $state('');
   let editSteps = $state<string[]>([]);
+  let editTools = $state<string[]>([]);
+  let editVariables = $state<WorkflowVariable[]>([]);
   let saving = $state(false);
+
+  const varTypes = ['string', 'url', 'path', 'number', 'bool', 'array'] as const;
 
   $effect(() => {
     loadSession();
@@ -86,7 +90,9 @@
       extractedWorkflow = wf;
       editName = wf.name;
       editDesc = wf.description;
-      editSteps = [...wf.steps];
+      editSteps = [...(wf.steps || [])];
+      editTools = [...(wf.tools || [])];
+      editVariables = (wf.variables || []).map(v => ({ ...v }));
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to extract workflow';
     } finally {
@@ -94,6 +100,7 @@
     }
   }
 
+  // Step management
   function addStep() { editSteps = [...editSteps, '']; }
   function removeStep(i: number) { editSteps = editSteps.filter((_, idx) => idx !== i); }
   function moveStep(i: number, dir: -1 | 1) {
@@ -102,6 +109,20 @@
     const copy = [...editSteps];
     [copy[i], copy[j]] = [copy[j], copy[i]];
     editSteps = copy;
+  }
+
+  // Variable management
+  function addVariable() {
+    editVariables = [...editVariables, {
+      name: '',
+      type: 'string',
+      required: false,
+      default_value: '',
+      description: '',
+    }];
+  }
+  function removeVariable(i: number) {
+    editVariables = editVariables.filter((_, idx) => idx !== i);
   }
 
   async function handleSave() {
@@ -113,6 +134,8 @@
         name: editName.trim(),
         description: editDesc.trim(),
         steps: editSteps.filter(s => s.trim()),
+        tools: editTools,
+        variables: editVariables.filter(v => v.name.trim()),
       });
       navigate('/workflows');
     } catch (e) {
@@ -127,6 +150,8 @@
     editName = '';
     editDesc = '';
     editSteps = [];
+    editTools = [];
+    editVariables = [];
   }
 </script>
 
@@ -162,44 +187,139 @@
 
   <!-- Extracted workflow preview/edit form -->
   {#if extractedWorkflow}
-    <div class="rounded-lg border border-emerald-500/30 bg-slate-800 p-5 space-y-4">
+    <div class="rounded-lg border border-emerald-500/30 bg-slate-800 p-5 space-y-5">
       <div class="flex items-center justify-between">
         <h2 class="text-sm font-semibold text-emerald-400">Extracted Workflow — Edit before saving</h2>
         <button onclick={cancelExtract} class="text-xs text-slate-500 hover:text-slate-300 transition-colors">Cancel</button>
       </div>
 
-      <input
-        type="text"
-        placeholder="Workflow name"
-        bind:value={editName}
-        class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors"
-      />
-      <textarea
-        placeholder="Description"
-        bind:value={editDesc}
-        rows="2"
-        class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors resize-none"
-      ></textarea>
-
-      <div class="space-y-2">
-        <p class="text-xs font-medium text-slate-400">Steps ({editSteps.length})</p>
-        {#each editSteps as step, i}
-          <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-500 w-5 text-right">{i + 1}.</span>
-            <input
-              type="text"
-              bind:value={editSteps[i]}
-              class="flex-1 rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-emerald-500/50 transition-colors"
-            />
-            <button onclick={() => moveStep(i, -1)} disabled={i === 0} class="text-slate-500 hover:text-slate-300 disabled:opacity-30 transition-colors" title="Move up">↑</button>
-            <button onclick={() => moveStep(i, 1)} disabled={i === editSteps.length - 1} class="text-slate-500 hover:text-slate-300 disabled:opacity-30 transition-colors" title="Move down">↓</button>
-            <button onclick={() => removeStep(i)} class="text-red-400 hover:text-red-300 transition-colors" title="Remove">×</button>
-          </div>
-        {/each}
-        <button onclick={addStep} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">+ Add step</button>
+      <!-- Name -->
+      <div>
+        <label class="text-xs font-medium text-slate-400 mb-1 block">Name</label>
+        <input
+          type="text"
+          placeholder="workflow-name"
+          bind:value={editName}
+          class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors"
+        />
       </div>
 
-      <div class="flex gap-2">
+      <!-- Description -->
+      <div>
+        <label class="text-xs font-medium text-slate-400 mb-1 block">Description</label>
+        <textarea
+          placeholder="What does this workflow do?"
+          bind:value={editDesc}
+          rows="2"
+          class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors resize-none"
+        ></textarea>
+      </div>
+
+      <!-- Detected Tools -->
+      {#if editTools.length > 0}
+        <div>
+          <label class="text-xs font-medium text-slate-400 mb-2 block">Detected Tools</label>
+          <div class="flex flex-wrap gap-2">
+            {#each editTools as tool}
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-xs font-medium text-amber-400">
+                <svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                </svg>
+                {tool}
+              </span>
+            {/each}
+          </div>
+        </div>
+      {/if}
+
+      <!-- Variables -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-medium text-slate-400">Variables ({editVariables.length})</label>
+          <button onclick={addVariable} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">+ Add variable</button>
+        </div>
+        {#if editVariables.length > 0}
+          <div class="space-y-3">
+            {#each editVariables as variable, i}
+              <div class="rounded-lg border border-slate-700/50 bg-slate-900/50 p-3 space-y-2">
+                <div class="flex items-center gap-2">
+                  <!-- Variable name -->
+                  <input
+                    type="text"
+                    placeholder="variable_name"
+                    bind:value={editVariables[i].name}
+                    class="flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm font-mono text-slate-200 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors"
+                  />
+                  <!-- Type selector -->
+                  <select
+                    bind:value={editVariables[i].type}
+                    class="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 outline-none focus:border-emerald-500/50"
+                  >
+                    {#each varTypes as vt}
+                      <option value={vt}>{vt}</option>
+                    {/each}
+                  </select>
+                  <!-- Required toggle -->
+                  <label class="flex items-center gap-1 text-xs text-slate-400 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      bind:checked={editVariables[i].required}
+                      class="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/50"
+                    />
+                    required
+                  </label>
+                  <!-- Remove -->
+                  <button onclick={() => removeVariable(i)} class="text-red-400 hover:text-red-300 transition-colors" title="Remove variable">×</button>
+                </div>
+                <div class="flex items-center gap-2">
+                  <!-- Default value -->
+                  <input
+                    type="text"
+                    placeholder="Default value"
+                    bind:value={editVariables[i].default_value}
+                    class="flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors"
+                  />
+                  <!-- Description -->
+                  <input
+                    type="text"
+                    placeholder="Description"
+                    bind:value={editVariables[i].description}
+                    class="flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors"
+                  />
+                </div>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <p class="text-xs text-slate-600 italic">No variables detected. Add one to make this workflow reusable.</p>
+        {/if}
+      </div>
+
+      <!-- Steps -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-medium text-slate-400">Steps ({editSteps.length})</label>
+          <button onclick={addStep} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">+ Add step</button>
+        </div>
+        <div class="space-y-2">
+          {#each editSteps as step, i}
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-500 w-5 text-right">{i + 1}.</span>
+              <input
+                type="text"
+                bind:value={editSteps[i]}
+                class="flex-1 rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 outline-none focus:border-emerald-500/50 transition-colors"
+              />
+              <button onclick={() => moveStep(i, -1)} disabled={i === 0} class="text-slate-500 hover:text-slate-300 disabled:opacity-30 transition-colors" title="Move up">↑</button>
+              <button onclick={() => moveStep(i, 1)} disabled={i === editSteps.length - 1} class="text-slate-500 hover:text-slate-300 disabled:opacity-30 transition-colors" title="Move down">↓</button>
+              <button onclick={() => removeStep(i)} class="text-red-400 hover:text-red-300 transition-colors" title="Remove">×</button>
+            </div>
+          {/each}
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex gap-2 pt-2 border-t border-slate-700/50">
         <button
           onclick={handleSave}
           disabled={saving || !editName.trim()}
@@ -236,7 +356,6 @@
   {:else if session && session.events.length > 0}
     <!-- Timeline -->
     <div class="relative space-y-3">
-      <!-- Vertical timeline line -->
       <div class="absolute left-5 top-0 bottom-0 w-px bg-slate-700/50"></div>
 
       {#each session.events as event, idx}
@@ -245,11 +364,9 @@
         {@const toolEvent = isToolEvent(event.type)}
 
         <div class="relative pl-12">
-          <!-- Timeline dot -->
           <div class="absolute left-3.5 top-4 w-3 h-3 rounded-full border-2 {typeColor(event.type)}"></div>
 
           <div class="rounded-lg border-l-2 {typeColor(event.type)} bg-slate-800/50 p-4">
-            <!-- Event header -->
             <div class="flex items-center gap-2 mb-2">
               <span class="rounded px-1.5 py-0.5 text-[10px] font-medium {typeBadgeColor(event.type)}">
                 {event.type}
@@ -262,7 +379,6 @@
               <span class="text-[10px] text-slate-500 ml-auto">{formatTimestamp(event.timestamp)}</span>
             </div>
 
-            <!-- Content -->
             {#if toolEvent}
               <pre class="text-xs text-slate-300 bg-slate-900/50 rounded p-3 overflow-x-auto whitespace-pre-wrap break-words {long && !expanded ? 'max-h-32 overflow-hidden' : ''}">{long && !expanded ? event.content.slice(0, 500) + '...' : event.content}</pre>
             {:else}
