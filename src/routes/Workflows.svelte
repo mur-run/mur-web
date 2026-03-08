@@ -1,5 +1,6 @@
 <script lang="ts">
   import * as store from '../lib/dataStore';
+  import { searchWorkflows, type WorkflowSearchResult } from '../lib/api';
   import type { Workflow, WorkflowVariable } from '../lib/types';
 
   let workflows = $state<Workflow[]>([]);
@@ -10,10 +11,20 @@
   // Search & pagination
   let searchQuery = $state('');
   let currentPage = $state(1);
+  let searchMode = $state<'keyword' | 'semantic'>('keyword');
+  let semanticResults = $state<string[]>([]); // workflow names from semantic search
+  let searching = $state(false);
   const perPage = 10;
 
   const filtered = $derived.by(() => {
     if (!searchQuery) return workflows;
+    if (searchMode === 'semantic' && semanticResults.length > 0) {
+      // Order by semantic ranking
+      return semanticResults
+        .map(name => workflows.find(w => w.id === name || w.name === name))
+        .filter((w): w is Workflow => !!w);
+    }
+    // Keyword fallback
     const q = searchQuery.toLowerCase();
     return workflows.filter(w =>
       w.name.toLowerCase().includes(q) ||
@@ -30,6 +41,30 @@
     searchQuery;
     currentPage = 1;
   });
+
+  let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  function onSearchInput() {
+    // Instant keyword filter
+    searchMode = 'keyword';
+    semanticResults = [];
+
+    // Debounced semantic search (500ms after stop typing)
+    if (searchTimeout) clearTimeout(searchTimeout);
+    if (searchQuery.trim().length >= 2) {
+      searchTimeout = setTimeout(async () => {
+        searching = true;
+        try {
+          const results = await searchWorkflows(searchQuery.trim());
+          if (results.length > 0) {
+            semanticResults = results.map(r => r.name);
+            searchMode = 'semantic';
+          }
+        } catch { /* ignore */ }
+        searching = false;
+      }, 500);
+    }
+  }
 
   // New workflow form
   let newName = $state('');
@@ -141,10 +176,22 @@
     <svg class="absolute left-3 top-2.5 h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
     <input
       type="text"
-      placeholder="Search workflows by name, description, or tool..."
+      placeholder="Search workflows (semantic + keyword)..."
       bind:value={searchQuery}
-      class="w-full rounded-lg border border-slate-700 bg-slate-800 pl-10 pr-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors"
+      oninput={onSearchInput}
+      class="w-full rounded-lg border border-slate-700 bg-slate-800 pl-10 pr-20 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors"
     />
+    {#if searchQuery}
+      <span class="absolute right-3 top-2.5 text-[10px] text-slate-500">
+        {#if searching}
+          searching…
+        {:else if searchMode === 'semantic'}
+          🧠 semantic
+        {:else}
+          🔤 keyword
+        {/if}
+      </span>
+    {/if}
   </div>
 
   <!-- New workflow form -->

@@ -181,6 +181,24 @@ export async function deleteWorkflow(id: string): Promise<void> {
   await apiDelete(`/workflows/${id}`);
 }
 
+export interface WorkflowSearchResult {
+  name: string;
+  description: string;
+  score: number;
+}
+
+export async function searchWorkflows(query: string, limit: number = 10): Promise<WorkflowSearchResult[]> {
+  if (dataSource === 'demo') {
+    const q = query.toLowerCase();
+    return demoWorkflows
+      .filter(w => w.name.toLowerCase().includes(q) || w.description.toLowerCase().includes(q))
+      .map(w => ({ name: w.name, description: w.description, score: 0.5 }));
+  }
+  const raw = await apiPost<unknown>('/workflows/search', { query, limit });
+  const data = (raw as any)?.data || [];
+  return Array.isArray(data) ? data : [];
+}
+
 // --- Session API ---
 
 export async function getSessions(): Promise<Session[]> {
