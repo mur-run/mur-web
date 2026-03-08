@@ -2,6 +2,7 @@
   import { getSession, extractWorkflowFromSession, createWorkflow } from '../lib/api';
   import { navigate } from '../lib/router';
   import type { SessionDetail, SessionEvent, Workflow, WorkflowVariable } from '../lib/types';
+  import { t, subscribe as i18nSubscribe } from '../lib/i18n';
 
   let { id }: { id: string } = $props();
 
@@ -9,6 +10,7 @@
   let loading = $state(true);
   let error = $state('');
   let expandedEvents = $state<Set<number>>(new Set());
+  let _i18n = $state(0);
 
   // Extract workflow state
   let extracting = $state(false);
@@ -24,6 +26,8 @@
 
   $effect(() => {
     loadSession();
+    const unsub = i18nSubscribe(() => _i18n++);
+    return unsub;
   });
 
   async function loadSession() {
@@ -162,15 +166,15 @@
       onclick={() => navigate('/sessions')}
       class="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-colors"
     >
-      ← Back
+      {void _i18n, t('common.back')}
     </button>
     <div class="flex-1">
       <h1 class="text-2xl font-bold text-slate-100">
-        Session <span class="font-mono text-emerald-400">{shortId(id)}</span>
+        {t('session.title')} <span class="font-mono text-emerald-400">{shortId(id)}</span>
       </h1>
       {#if session}
         <p class="text-sm text-slate-400 mt-0.5">
-          {session.event_count} events · {new Date(session.modified_at).toLocaleString()}
+          {session.event_count} {t('session.events')} · {new Date(session.modified_at).toLocaleString()}
         </p>
       {/if}
     </div>
@@ -180,7 +184,7 @@
         disabled={extracting}
         class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors"
       >
-        {extracting ? 'Extracting...' : 'Extract Workflow'}
+        {extracting ? t('session.extracting') : t('session.extractWorkflow')}
       </button>
     {/if}
   </div>
@@ -189,16 +193,16 @@
   {#if extractedWorkflow}
     <div class="rounded-lg border border-emerald-500/30 bg-slate-800 p-5 space-y-5">
       <div class="flex items-center justify-between">
-        <h2 class="text-sm font-semibold text-emerald-400">Extracted Workflow — Edit before saving</h2>
-        <button onclick={cancelExtract} class="text-xs text-slate-500 hover:text-slate-300 transition-colors">Cancel</button>
+        <h2 class="text-sm font-semibold text-emerald-400">{t('session.extractedTitle')}</h2>
+        <button onclick={cancelExtract} class="text-xs text-slate-500 hover:text-slate-300 transition-colors">{t('common.cancel')}</button>
       </div>
 
       <!-- Name -->
       <div>
-        <label class="text-xs font-medium text-slate-400 mb-1 block">Name</label>
+        <label class="text-xs font-medium text-slate-400 mb-1 block">{t('common.name')}</label>
         <input
           type="text"
-          placeholder="workflow-name"
+          placeholder={t('workflows.namePlaceholder')}
           bind:value={editName}
           class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors"
         />
@@ -206,9 +210,9 @@
 
       <!-- Description -->
       <div>
-        <label class="text-xs font-medium text-slate-400 mb-1 block">Description</label>
+        <label class="text-xs font-medium text-slate-400 mb-1 block">{t('common.description')}</label>
         <textarea
-          placeholder="What does this workflow do?"
+          placeholder={t('workflows.descPlaceholder')}
           bind:value={editDesc}
           rows="2"
           class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors resize-none"
@@ -218,7 +222,7 @@
       <!-- Detected Tools -->
       {#if editTools.length > 0}
         <div>
-          <label class="text-xs font-medium text-slate-400 mb-2 block">Detected Tools</label>
+          <label class="text-xs font-medium text-slate-400 mb-2 block">{t('session.detectedTools')}</label>
           <div class="flex flex-wrap gap-2">
             {#each editTools as tool}
               <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 px-3 py-1 text-xs font-medium text-amber-400">
@@ -235,8 +239,8 @@
       <!-- Variables -->
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="text-xs font-medium text-slate-400">Variables ({editVariables.length})</label>
-          <button onclick={addVariable} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">+ Add variable</button>
+          <label class="text-xs font-medium text-slate-400">{t('common.variables')} ({editVariables.length})</label>
+          <button onclick={addVariable} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">{t('workflows.addVariable')}</button>
         </div>
         {#if editVariables.length > 0}
           <div class="space-y-2">
@@ -279,7 +283,7 @@
                     bind:checked={editVariables[i].required}
                     class="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500/50 h-3 w-3"
                   />
-                  required
+                  {t('common.required')}
                 </label>
                 <!-- Remove -->
                 <button onclick={() => removeVariable(i)} class="text-red-400 hover:text-red-300 transition-colors text-xs" title="Remove">×</button>
@@ -287,15 +291,15 @@
             {/each}
           </div>
         {:else}
-          <p class="text-xs text-slate-600 italic">No variables detected. Add one to make this workflow reusable.</p>
+          <p class="text-xs text-slate-600 italic">{t('workflows.noVariables')}</p>
         {/if}
       </div>
 
       <!-- Steps -->
       <div>
         <div class="flex items-center justify-between mb-2">
-          <label class="text-xs font-medium text-slate-400">Steps ({editSteps.length})</label>
-          <button onclick={addStep} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">+ Add step</button>
+          <label class="text-xs font-medium text-slate-400">{t('common.steps')} ({editSteps.length})</label>
+          <button onclick={addStep} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">{t('workflows.addStep')}</button>
         </div>
         <div class="space-y-2">
           {#each editSteps as step, i}
@@ -321,13 +325,13 @@
           disabled={saving || !editName.trim()}
           class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors"
         >
-          {saving ? 'Saving...' : 'Save Workflow'}
+          {saving ? t('session.saving') : t('session.saveWorkflow')}
         </button>
         <button
           onclick={cancelExtract}
           class="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
       </div>
     </div>
@@ -388,7 +392,7 @@
                 onclick={() => toggleExpand(idx)}
                 class="mt-2 text-xs text-emerald-400 hover:text-emerald-300 transition-colors"
               >
-                {expanded ? 'Collapse' : `Show all (${event.content.length.toLocaleString()} chars)`}
+                {expanded ? t('session.collapse') : t('session.showAll', { chars: event.content.length.toLocaleString() })}
               </button>
             {/if}
           </div>
@@ -397,7 +401,7 @@
     </div>
   {:else if session}
     <div class="flex flex-col items-center justify-center py-16 text-slate-500">
-      <p class="text-sm">This session has no events</p>
+      <p class="text-sm">{t('session.noEvents')}</p>
     </div>
   {/if}
 </div>

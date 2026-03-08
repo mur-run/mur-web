@@ -6,17 +6,20 @@
   import ConfidenceSlider from '../components/ConfidenceSlider.svelte';
   import ConfidenceChart from '../components/ConfidenceChart.svelte';
   import ActivityTimeline from '../components/ActivityTimeline.svelte';
+  import { t, subscribe as i18nSubscribe } from '../lib/i18n';
 
   let stats = $state<DashboardStats | null>(null);
   let allPatterns = $state<Pattern[]>([]);
   let decayWarnings = $state<Pattern[]>([]);
   let recentPatterns = $state<Pattern[]>([]);
+  let _i18n = $state(0);
 
   $effect(() => {
     if (!store.isLoaded()) store.load();
     loadData();
     const unsub = store.subscribe(() => loadData());
-    return unsub;
+    const unsubi18n = i18nSubscribe(() => _i18n++);
+    return () => { unsub(); unsubi18n(); };
   });
 
   async function loadData() {
@@ -50,42 +53,42 @@
 
 <div class="space-y-6">
   <div>
-    <h1 class="text-2xl font-bold text-slate-100">Dashboard</h1>
-    <p class="text-sm text-slate-400 mt-1">Overview of your learning patterns</p>
+    <h1 class="text-2xl font-bold text-slate-100">{void _i18n, t('dashboard.title')}</h1>
+    <p class="text-sm text-slate-400 mt-1">{t('dashboard.subtitle')}</p>
   </div>
 
   {#if stats}
     <!-- Stats cards -->
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-6">
-        <div class="text-sm text-slate-400">Total Patterns</div>
+        <div class="text-sm text-slate-400">{t('dashboard.totalPatterns')}</div>
         <div class="mt-2 text-3xl font-bold text-slate-100">{stats.totalPatterns}</div>
-        <div class="mt-1 text-xs text-slate-500">{stats.activePatterns} active</div>
+        <div class="mt-1 text-xs text-slate-500">{stats.activePatterns} {t('dashboard.active')}</div>
       </div>
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-6">
-        <div class="text-sm text-slate-400">Workflows</div>
+        <div class="text-sm text-slate-400">{t('dashboard.workflows')}</div>
         <div class="mt-2 text-3xl font-bold text-slate-100">{stats.totalWorkflows}</div>
-        <div class="mt-1 text-xs text-slate-500">automated flows</div>
+        <div class="mt-1 text-xs text-slate-500">{t('dashboard.automatedFlows')}</div>
       </div>
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-6">
-        <div class="text-sm text-slate-400">Avg Confidence</div>
+        <div class="text-sm text-slate-400">{t('dashboard.avgConfidence')}</div>
         <div class="mt-2 text-3xl font-bold {stats.avgConfidence >= 0.7 ? 'text-emerald-400' : stats.avgConfidence >= 0.5 ? 'text-amber-400' : 'text-rose-400'}">
           {(stats.avgConfidence * 100).toFixed(0)}%
         </div>
-        <div class="mt-1 text-xs text-slate-500">across active patterns</div>
+        <div class="mt-1 text-xs text-slate-500">{t('dashboard.acrossActive')}</div>
       </div>
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-6">
-        <div class="text-sm text-slate-400">Decay Warnings</div>
+        <div class="text-sm text-slate-400">{t('dashboard.decayWarnings')}</div>
         <div class="mt-2 text-3xl font-bold {decayWarnings.length > 0 ? 'text-amber-400' : 'text-emerald-400'}">
           {decayWarnings.length}
         </div>
-        <div class="mt-1 text-xs text-slate-500">below 50% confidence</div>
+        <div class="mt-1 text-xs text-slate-500">{t('dashboard.below50')}</div>
       </div>
     </div>
 
     <!-- Maturity distribution -->
     <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-6">
-      <h2 class="text-sm font-medium text-slate-300 mb-4">Maturity Distribution</h2>
+      <h2 class="text-sm font-medium text-slate-300 mb-4">{t('dashboard.maturityDist')}</h2>
       <div class="flex h-8 overflow-hidden rounded-lg bg-slate-700/50">
         {#each maturityOrder as m}
           {@const count = stats.maturityDistribution[m]}
@@ -114,11 +117,11 @@
     <!-- Charts -->
     <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-6">
-        <h2 class="text-sm font-medium text-slate-300 mb-3">Confidence Distribution</h2>
+        <h2 class="text-sm font-medium text-slate-300 mb-3">{t('dashboard.confidenceDist')}</h2>
         <ConfidenceChart patterns={allPatterns} />
       </div>
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-6">
-        <h2 class="text-sm font-medium text-slate-300 mb-3">Activity (Last 30 Days)</h2>
+        <h2 class="text-sm font-medium text-slate-300 mb-3">{t('dashboard.activity30d')}</h2>
         <ActivityTimeline patterns={allPatterns} />
       </div>
     </div>
@@ -127,8 +130,8 @@
       <!-- Recent activity -->
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-6">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-sm font-medium text-slate-300">Recent Activity</h2>
-          <a href="#/patterns" class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">View all</a>
+          <h2 class="text-sm font-medium text-slate-300">{t('dashboard.recentActivity')}</h2>
+          <a href="#/patterns" class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">{t('dashboard.viewAll')}</a>
         </div>
         <div class="space-y-3">
           {#each recentPatterns as pattern}
@@ -149,14 +152,14 @@
       <!-- Decay warnings -->
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-6">
         <h2 class="text-sm font-medium text-slate-300 mb-4">
-          Decay Warnings
+          {t('dashboard.decayWarnings')}
           {#if decayWarnings.length > 0}
             <span class="ml-2 inline-flex items-center rounded-full bg-amber-500/10 px-2 py-0.5 text-xs text-amber-400">{decayWarnings.length}</span>
           {/if}
         </h2>
         {#if decayWarnings.length === 0}
           <div class="flex items-center justify-center py-8 text-sm text-slate-500">
-            All patterns above 50% confidence
+            {t('dashboard.allAbove50')}
           </div>
         {:else}
           <div class="space-y-3">

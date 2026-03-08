@@ -2,13 +2,17 @@
   import { getSessions } from '../lib/api';
   import { navigate } from '../lib/router';
   import type { Session } from '../lib/types';
+  import { t, subscribe as i18nSubscribe } from '../lib/i18n';
 
   let sessions = $state<Session[]>([]);
   let loading = $state(true);
   let error = $state('');
+  let _i18n = $state(0);
 
   $effect(() => {
     loadSessions();
+    const unsub = i18nSubscribe(() => _i18n++);
+    return unsub;
   });
 
   async function loadSessions() {
@@ -42,14 +46,14 @@
 <div class="space-y-6">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-slate-100">Sessions</h1>
+      <h1 class="text-2xl font-bold text-slate-100">{void _i18n, t('sessions.title')}</h1>
       <p class="text-sm text-slate-400 mt-1">
         {#if !loading && !error}
-          {sessions.length} recording{sessions.length !== 1 ? 's' : ''}
+          {t('sessions.recordings', { count: sessions.length })}
         {:else if error}
-          <span class="text-rose-400">Error loading sessions</span>
+          <span class="text-rose-400">{t('sessions.errorLoading')}</span>
         {:else}
-          Loading...
+          {t('sessions.loading')}
         {/if}
       </p>
     </div>
@@ -57,14 +61,14 @@
       onclick={loadSessions}
       class="rounded-lg border border-slate-700 px-3 py-1.5 text-sm text-slate-400 hover:text-slate-200 hover:border-slate-600 transition-colors"
     >
-      Refresh
+      {t('sessions.refresh')}
     </button>
   </div>
 
   {#if error}
     <div class="rounded-lg border border-rose-500/30 bg-rose-950/30 p-4">
       <p class="text-sm text-rose-400">{error}</p>
-      <p class="text-xs text-slate-500 mt-1">Make sure `mur serve` is running</p>
+      <p class="text-xs text-slate-500 mt-1">{t('sessions.makeSureRunning')}</p>
     </div>
   {/if}
 
@@ -83,10 +87,10 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-slate-700/50 text-left text-xs text-slate-500">
-              <th class="px-4 py-3 font-medium">Session ID</th>
-              <th class="px-4 py-3 font-medium">Events</th>
-              <th class="px-4 py-3 font-medium">Size</th>
-              <th class="px-4 py-3 font-medium">Date</th>
+              <th class="px-4 py-3 font-medium">{t('sessions.sessionId')}</th>
+              <th class="px-4 py-3 font-medium">{t('sessions.events')}</th>
+              <th class="px-4 py-3 font-medium">{t('sessions.size')}</th>
+              <th class="px-4 py-3 font-medium">{t('sessions.date')}</th>
               <th class="px-4 py-3 font-medium"></th>
             </tr>
           </thead>
@@ -103,7 +107,7 @@
                 <td class="px-4 py-3 text-slate-400">{formatSize(session.file_size)}</td>
                 <td class="px-4 py-3 text-slate-400 text-xs">{formatDate(session.modified_at)}</td>
                 <td class="px-4 py-3 text-right">
-                  <span class="text-xs text-slate-500 hover:text-emerald-400 transition-colors">Review →</span>
+                  <span class="text-xs text-slate-500 hover:text-emerald-400 transition-colors">{t('sessions.review')}</span>
                 </td>
               </tr>
             {/each}
@@ -117,8 +121,8 @@
         <circle cx="12" cy="12" r="10" />
         <polyline points="12 6 12 12 16 14" />
       </svg>
-      <p class="text-sm">No session recordings found</p>
-      <p class="text-xs mt-1">Use <code class="bg-slate-800 px-1 rounded">mur session start</code> to begin recording</p>
+      <p class="text-sm">{t('sessions.noRecordings')}</p>
+      <p class="text-xs mt-1">{t('sessions.noRecordingsHint')}</p>
     </div>
   {/if}
 </div>

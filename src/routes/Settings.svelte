@@ -2,8 +2,10 @@
   import { getDataSource, setDataSource, detectBackend, getPatterns, getWorkflows } from '../lib/api';
   import { getTheme, onThemeChange } from '../lib/theme';
   import type { DataSource } from '../lib/types';
+  import { t, subscribe as i18nSubscribe } from '../lib/i18n';
 
   let currentSource = $state<DataSource>(getDataSource());
+  let _i18n = $state(0);
   let localUrl = $state('http://localhost:3847');
   let cloudUrl = $state('https://mur-server.fly.dev');
   let currentTheme = $state(getTheme());
@@ -14,8 +16,9 @@
 
   $effect(() => {
     refreshCounts();
-    const unsub = onThemeChange(t => currentTheme = t);
-    return unsub;
+    const unsub = onThemeChange(th => currentTheme = th);
+    const unsubi18n = i18nSubscribe(() => _i18n++);
+    return () => { unsub(); unsubi18n(); };
   });
 
   async function refreshCounts() {
@@ -81,22 +84,22 @@
     input.click();
   }
 
-  const sourceItems: { key: DataSource; label: string; icon: string; desc: string }[] = [
-    { key: 'demo', label: 'Demo', icon: '👀', desc: 'Sample data for exploring the UI' },
-    { key: 'local', label: 'Local', icon: '🟢', desc: 'Connect to mur serve on localhost' },
-    { key: 'cloud', label: 'Cloud', icon: '☁️', desc: 'Connect to mur-server.fly.dev' },
+  const sourceItems: { key: DataSource; label: string; icon: string; descKey: string }[] = [
+    { key: 'demo', label: 'Demo', icon: '👀', descKey: 'settings.demoDesc' },
+    { key: 'local', label: 'Local', icon: '🟢', descKey: 'settings.localDesc' },
+    { key: 'cloud', label: 'Cloud', icon: '☁️', descKey: 'settings.cloudDesc' },
   ];
 </script>
 
 <div class="space-y-8 max-w-2xl">
   <div>
-    <h1 class="text-2xl font-bold text-slate-100">Settings</h1>
-    <p class="text-sm text-slate-400 mt-1">Configure data source, export data, and more</p>
+    <h1 class="text-2xl font-bold text-slate-100">{void _i18n, t('settings.title')}</h1>
+    <p class="text-sm text-slate-400 mt-1">{t('settings.subtitle')}</p>
   </div>
 
   <!-- Data Source -->
   <section class="space-y-3">
-    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Data Source</h2>
+    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('settings.dataSource')}</h2>
     <div class="grid grid-cols-3 gap-3">
       {#each sourceItems as item}
         <button
@@ -107,7 +110,7 @@
         >
           <div class="text-lg mb-1">{item.icon}</div>
           <div class="text-sm font-medium {currentSource === item.key ? 'text-emerald-400' : 'text-slate-200'}">{item.label}</div>
-          <div class="text-[11px] text-slate-500 mt-0.5">{item.desc}</div>
+          <div class="text-[11px] text-slate-500 mt-0.5">{t(item.descKey)}</div>
         </button>
       {/each}
     </div>
@@ -116,11 +119,11 @@
   <!-- Connection -->
   {#if currentSource !== 'demo'}
     <section class="space-y-3">
-      <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Connection</h2>
+      <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('settings.connection')}</h2>
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 space-y-3">
         <div>
           <span class="text-xs text-slate-400 block mb-1">
-            {currentSource === 'local' ? 'Local Backend URL' : 'Cloud Backend URL'}
+            {currentSource === 'local' ? t('settings.localUrl') : t('settings.cloudUrl')}
           </span>
           {#if currentSource === 'local'}
             <input
@@ -144,7 +147,7 @@
             disabled={testStatus === 'testing'}
             class="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-600 disabled:opacity-50 transition-colors"
           >
-            {testStatus === 'testing' ? 'Testing…' : 'Test Connection'}
+            {testStatus === 'testing' ? t('settings.testing') : t('settings.testConnection')}
           </button>
           {#if testStatus === 'ok'}
             <span class="text-sm text-emerald-400">✓ {testMessage}</span>
@@ -158,60 +161,60 @@
 
   <!-- Stats -->
   <section class="space-y-3">
-    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Current Data</h2>
+    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('settings.currentData')}</h2>
     <div class="grid grid-cols-2 gap-3">
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4">
         <div class="text-2xl font-bold text-slate-100">{patternCount}</div>
-        <div class="text-xs text-slate-400 mt-1">Patterns</div>
+        <div class="text-xs text-slate-400 mt-1">{t('settings.patterns')}</div>
       </div>
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4">
         <div class="text-2xl font-bold text-slate-100">{workflowCount}</div>
-        <div class="text-xs text-slate-400 mt-1">Workflows</div>
+        <div class="text-xs text-slate-400 mt-1">{t('settings.workflows')}</div>
       </div>
     </div>
   </section>
 
   <!-- Export / Import -->
   <section class="space-y-3">
-    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Data Management</h2>
+    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('settings.dataManagement')}</h2>
     <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 flex gap-3">
       <button
         onclick={exportData}
         class="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-600 transition-colors"
       >
-        📥 Export JSON
+        {t('settings.exportJson')}
       </button>
       <button
         onclick={importData}
         class="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-200 hover:bg-slate-600 transition-colors"
       >
-        📤 Import JSON
+        {t('settings.importJson')}
       </button>
     </div>
   </section>
 
   <!-- Theme -->
   <section class="space-y-3">
-    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Theme</h2>
+    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('settings.theme')}</h2>
     <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 flex items-center gap-4">
       <button
         onclick={() => { import('../lib/theme').then(m => m.setTheme('dark')); }}
         class="rounded-lg border px-4 py-2 text-sm transition-colors {currentTheme === 'dark' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-slate-700 text-slate-400 hover:text-slate-200'}"
       >
-        🌙 Dark
+        {t('settings.dark')}
       </button>
       <button
         onclick={() => { import('../lib/theme').then(m => m.setTheme('light')); }}
         class="rounded-lg border px-4 py-2 text-sm transition-colors {currentTheme === 'light' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-slate-700 text-slate-400 hover:text-slate-200'}"
       >
-        ☀️ Light
+        {t('settings.light')}
       </button>
     </div>
   </section>
 
   <!-- Keyboard Shortcuts -->
   <section class="space-y-3">
-    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Keyboard Shortcuts</h2>
+    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('settings.shortcuts')}</h2>
     <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4">
       <div class="grid grid-cols-2 gap-2 text-xs">
         <div class="flex items-center gap-2"><kbd class="rounded bg-slate-700 px-1.5 py-0.5 border border-slate-600 text-slate-400">⌘K</kbd> <span class="text-slate-400">Command palette</span></div>
@@ -228,7 +231,7 @@
 
   <!-- About -->
   <section class="space-y-3">
-    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">About</h2>
+    <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('settings.about')}</h2>
     <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 space-y-2">
       <div class="flex items-center gap-2">
         <span class="text-lg">🧠</span>

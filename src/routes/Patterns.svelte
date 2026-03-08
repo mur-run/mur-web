@@ -5,8 +5,10 @@
   import ConfidenceSlider from '../components/ConfidenceSlider.svelte';
   import * as store from '../lib/dataStore';
   import { showToast } from '../lib/toast';
+  import { t, subscribe as i18nSubscribe } from '../lib/i18n';
 
   let allPatterns = $state<Pattern[]>([]);
+  let _i18n = $state(0);
   let searchQuery = $state('');
   let maturityFilter = $state<Maturity | ''>('');
   let tierFilter = $state<Tier | ''>('');
@@ -20,7 +22,8 @@
     if (!store.isLoaded()) store.load();
     allPatterns = store.getPatterns();
     const unsub = store.subscribe(() => { allPatterns = store.getPatterns(); });
-    return unsub;
+    const unsubi18n = i18nSubscribe(() => _i18n++);
+    return () => { unsub(); unsubi18n(); };
   });
 
   const allTags = $derived(
@@ -87,7 +90,7 @@
   }
 
   async function bulkDelete() {
-    if (!confirm(`Delete ${selected.size} patterns permanently?`)) return;
+    if (!confirm(t('patterns.deleteConfirm', { count: selected.size }))) return;
     for (const id of selected) {
       await store.deletePattern(id);
     }
@@ -109,21 +112,21 @@
 <div class="space-y-6">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-slate-100">Patterns</h1>
-      <p class="text-sm text-slate-400 mt-1">{filtered.length} of {allPatterns.filter(p => !p.archived).length} patterns</p>
+      <h1 class="text-2xl font-bold text-slate-100">{void _i18n, t('patterns.title')}</h1>
+      <p class="text-sm text-slate-400 mt-1">{t('patterns.count', { filtered: filtered.length, total: allPatterns.filter(p => !p.archived).length })}</p>
     </div>
     <div class="flex items-center gap-2">
       <button
         onclick={() => { selectMode = !selectMode; if (!selectMode) selected = new Set(); }}
         class="rounded-lg border border-slate-700 px-3 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors {selectMode ? 'border-emerald-500/50 text-emerald-400' : ''}"
       >
-        ☑ Select
+        {t('patterns.select')}
       </button>
       <button
         onclick={() => navigate('/patterns/new')}
         class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 transition-colors"
       >
-        + New Pattern
+        {t('patterns.new')}
       </button>
     </div>
   </div>
@@ -136,7 +139,7 @@
       </svg>
       <input
         type="text"
-        placeholder="Search patterns..."
+        placeholder={t('patterns.searchPlaceholder')}
         bind:value={searchQuery}
         class="w-full rounded-lg border border-slate-700 bg-slate-800 py-2 pl-10 pr-3 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/25 transition-colors"
       />
@@ -146,7 +149,7 @@
       bind:value={maturityFilter}
       class="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-300 outline-none focus:border-emerald-500/50 transition-colors"
     >
-      <option value="">All Maturity</option>
+      <option value="">{t('patterns.allMaturity')}</option>
       <option value="Draft">Draft</option>
       <option value="Emerging">Emerging</option>
       <option value="Stable">Stable</option>
@@ -157,7 +160,7 @@
       bind:value={tierFilter}
       class="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-300 outline-none focus:border-emerald-500/50 transition-colors"
     >
-      <option value="">All Tiers</option>
+      <option value="">{t('patterns.allTiers')}</option>
       <option value="Session">Session</option>
       <option value="Project">Project</option>
       <option value="Global">Global</option>
@@ -167,14 +170,14 @@
       bind:value={tagFilter}
       class="rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-300 outline-none focus:border-emerald-500/50 transition-colors"
     >
-      <option value="">All Tags</option>
+      <option value="">{t('patterns.allTags')}</option>
       {#each allTags as tag}
         <option value={tag}>{tag}</option>
       {/each}
     </select>
 
     <div class="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-800 p-0.5">
-      {#each [{ key: 'name', label: 'Name' }, { key: 'confidence', label: 'Confidence' }, { key: 'updated', label: 'Updated' }] as { key, label }}
+      {#each [{ key: 'name', label: t('patterns.sortName') }, { key: 'confidence', label: t('patterns.sortConfidence') }, { key: 'updated', label: t('patterns.sortUpdated') }] as { key, label }}
         <button
           onclick={() => toggleSort(key as typeof sortBy)}
           class="rounded-md px-2.5 py-1 text-xs transition-colors {sortBy === key ? 'bg-slate-700 text-slate-200' : 'text-slate-500 hover:text-slate-300'}"
@@ -191,13 +194,13 @@
   <!-- Bulk actions bar -->
   {#if selectMode}
     <div class="flex items-center gap-3 rounded-lg border border-slate-700/50 bg-slate-800/50 px-4 py-2">
-      <span class="text-xs text-slate-400">{selected.size} selected</span>
-      <button onclick={selectAll} class="text-xs text-emerald-400 hover:text-emerald-300">All</button>
-      <button onclick={selectNone} class="text-xs text-slate-500 hover:text-slate-300">None</button>
+      <span class="text-xs text-slate-400">{t('patterns.selected', { count: selected.size })}</span>
+      <button onclick={selectAll} class="text-xs text-emerald-400 hover:text-emerald-300">{t('patterns.all')}</button>
+      <button onclick={selectNone} class="text-xs text-slate-500 hover:text-slate-300">{t('patterns.none')}</button>
       <div class="flex-1"></div>
       {#if selected.size > 0}
-        <button onclick={bulkArchive} class="rounded bg-amber-600/80 px-3 py-1 text-xs text-white hover:bg-amber-500">Archive ({selected.size})</button>
-        <button onclick={bulkDelete} class="rounded bg-red-600/80 px-3 py-1 text-xs text-white hover:bg-red-500">Delete ({selected.size})</button>
+        <button onclick={bulkArchive} class="rounded bg-amber-600/80 px-3 py-1 text-xs text-white hover:bg-amber-500">{t('patterns.archive', { count: selected.size })}</button>
+        <button onclick={bulkDelete} class="rounded bg-red-600/80 px-3 py-1 text-xs text-white hover:bg-red-500">{t('patterns.deleteBulk', { count: selected.size })}</button>
       {/if}
     </div>
   {/if}
@@ -238,7 +241,7 @@
 
         <div class="mt-3 flex items-center justify-between text-[10px] text-slate-500">
           <span>{pattern.tier}</span>
-          <span>{pattern.stats.injections} injections</span>
+          <span>{pattern.stats.injections} {t('patterns.injections')}</span>
         </div>
       </a>
     {/each}
@@ -249,8 +252,8 @@
       <svg class="h-12 w-12 mb-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
       </svg>
-      <p class="text-sm">No patterns found</p>
-      <p class="text-xs mt-1">Try adjusting your filters</p>
+      <p class="text-sm">{t('patterns.noPatterns')}</p>
+      <p class="text-xs mt-1">{t('patterns.noPatternsHint')}</p>
     </div>
   {/if}
 </div>
