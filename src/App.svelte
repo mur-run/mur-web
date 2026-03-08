@@ -25,8 +25,11 @@
   import { load as loadData, refresh as refreshData, isLoaded } from './lib/dataStore';
   import { initTheme, toggleTheme, getTheme, onThemeChange } from './lib/theme';
   import { detectCommander, isCommanderConnected } from './lib/commander';
+  import { t, getLocale, setLocale, getLocales, subscribe as i18nSubscribe } from './lib/i18n';
 
   let sidebarCollapsed = $state(false);
+  let locale = $state(getLocale());
+  let _i18nTick = $state(0); // Force reactivity on locale change
   let mobileMenuOpen = $state(false);
   let searchQuery = $state('');
   let dataSource = $state<'local' | 'cloud' | 'demo'>('demo');
@@ -39,7 +42,11 @@
   $effect(() => {
     initTheme();
     const themeUnsub = onThemeChange(t => theme = t);
-    return themeUnsub;
+    const i18nUnsub = i18nSubscribe(() => {
+      locale = getLocale();
+      _i18nTick++;
+    });
+    return () => { themeUnsub(); i18nUnsub(); };
   });
 
   $effect(() => {
@@ -97,15 +104,18 @@
     dataSource === 'local' ? '🟢' : dataSource === 'cloud' ? '☁️' : '👀'
   );
 
-  const navItems = [
-    { path: '/', label: 'Dashboard', icon: 'grid' },
-    { path: '/patterns', label: 'Patterns', icon: 'layers' },
-    { path: '/import', label: 'Import', icon: 'upload' },
-    { path: '/graph', label: 'Graph', icon: 'share' },
-    { path: '/workflows', label: 'Workflows', icon: 'git-branch' },
-    { path: '/sessions', label: 'Sessions', icon: 'clock' },
-    { path: '/settings', label: 'Settings', icon: 'settings' },
-  ];
+  const navItems = $derived.by(() => {
+    void _i18nTick; // trigger reactivity
+    return [
+      { path: '/', label: t('nav.dashboard'), icon: 'grid' },
+      { path: '/patterns', label: t('nav.patterns'), icon: 'layers' },
+      { path: '/import', label: 'Import', icon: 'upload' },
+      { path: '/graph', label: 'Graph', icon: 'share' },
+      { path: '/workflows', label: t('nav.workflows'), icon: 'git-branch' },
+      { path: '/sessions', label: t('nav.sessions'), icon: 'clock' },
+      { path: '/settings', label: t('nav.settings'), icon: 'settings' },
+    ];
+  });
 
   const commanderNavItems = [
     { path: '/commander', label: 'Commander', icon: 'zap' },
@@ -210,6 +220,33 @@
         {/each}
       {/if}
     </nav>
+
+    <!-- Language switcher -->
+    {#if !sidebarCollapsed}
+      <div class="border-t border-slate-700/50 px-3 py-2">
+        <select
+          value={locale}
+          onchange={(e) => setLocale((e.target as HTMLSelectElement).value as any)}
+          class="w-full rounded border border-slate-700 bg-slate-800 px-2 py-1 text-xs text-slate-400 outline-none focus:border-emerald-500/50 cursor-pointer"
+        >
+          {#each getLocales() as loc}
+            <option value={loc.code}>{loc.label}</option>
+          {/each}
+        </select>
+      </div>
+    {:else}
+      <button
+        onclick={() => {
+          const locales = getLocales();
+          const idx = locales.findIndex(l => l.code === locale);
+          setLocale(locales[(idx + 1) % locales.length].code);
+        }}
+        class="flex items-center justify-center border-t border-slate-700/50 p-3 text-slate-500 hover:text-slate-300 transition-colors"
+        title="Switch language"
+      >
+        🌐
+      </button>
+    {/if}
 
     <button
       onclick={() => sidebarCollapsed = !sidebarCollapsed}

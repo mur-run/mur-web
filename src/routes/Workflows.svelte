@@ -2,6 +2,13 @@
   import * as store from '../lib/dataStore';
   import { searchWorkflows, type WorkflowSearchResult } from '../lib/api';
   import type { Workflow, WorkflowVariable } from '../lib/types';
+  import { t, subscribe as i18nSubscribe } from '../lib/i18n';
+
+  let _i18n = $state(0);
+  $effect(() => {
+    const unsub = i18nSubscribe(() => _i18n++);
+    return unsub;
+  });
 
   let workflows = $state<Workflow[]>([]);
   let showNew = $state(false);
@@ -160,14 +167,14 @@
 <div class="space-y-6">
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-bold text-slate-100">Workflows</h1>
-      <p class="text-sm text-slate-400 mt-1">{filtered.length} of {workflows.length} workflows</p>
+      <h1 class="text-2xl font-bold text-slate-100">{void _i18n, t('workflows.title')}</h1>
+      <p class="text-sm text-slate-400 mt-1">{t('workflows.count', { filtered: filtered.length, total: workflows.length })}</p>
     </div>
     <button
       onclick={() => { showNew = !showNew; }}
       class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 transition-colors"
     >
-      {showNew ? 'Cancel' : '+ New Workflow'}
+      {showNew ? t('common.cancel') : t('workflows.new')}
     </button>
   </div>
 
@@ -176,7 +183,7 @@
     <svg class="absolute left-3 top-2.5 h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
     <input
       type="text"
-      placeholder="Search workflows (semantic + keyword)..."
+      placeholder={t('workflows.searchPlaceholder')}
       bind:value={searchQuery}
       oninput={onSearchInput}
       class="w-full rounded-lg border border-slate-700 bg-slate-800 pl-10 pr-20 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors"
@@ -184,11 +191,11 @@
     {#if searchQuery}
       <span class="absolute right-3 top-2.5 text-[10px] text-slate-500">
         {#if searching}
-          searching…
+          {t('common.searching')}
         {:else if searchMode === 'semantic'}
-          🧠 semantic
+          {t('common.semantic')}
         {:else}
-          🔤 keyword
+          {t('common.keyword')}
         {/if}
       </span>
     {/if}
@@ -197,28 +204,28 @@
   <!-- New workflow form -->
   {#if showNew}
     <div class="rounded-lg border border-emerald-500/30 bg-slate-800 p-5 space-y-4">
-      <h2 class="text-sm font-semibold text-emerald-400">New Workflow</h2>
+      <h2 class="text-sm font-semibold text-emerald-400">{t('workflows.newTitle')}</h2>
       <input
         type="text"
-        placeholder="Workflow name"
+        placeholder={t('workflows.namePlaceholder')}
         bind:value={newName}
         class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors"
       />
       <textarea
-        placeholder="Description"
+        placeholder={t('workflows.descPlaceholder')}
         bind:value={newDesc}
         rows="2"
         class="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors resize-none"
       ></textarea>
 
       <div class="space-y-2">
-        <p class="text-xs font-medium text-slate-400">Steps</p>
+        <p class="text-xs font-medium text-slate-400">{ t('common.steps') }</p>
         {#each newSteps as step, i}
           <div class="flex items-center gap-2">
             <span class="text-xs text-slate-500 w-5 text-right">{i + 1}.</span>
             <input
               type="text"
-              placeholder="Step description"
+              placeholder={t('workflows.stepPlaceholder')}
               bind:value={newSteps[i]}
               class="flex-1 rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500 outline-none focus:border-emerald-500/50 transition-colors"
             />
@@ -227,7 +234,7 @@
             <button onclick={() => removeNewStep(i)} class="text-red-400 hover:text-red-300 transition-colors" title="Remove">×</button>
           </div>
         {/each}
-        <button onclick={addNewStep} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">+ Add step</button>
+        <button onclick={addNewStep} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">{t('workflows.addStep')}</button>
       </div>
 
       <button
@@ -235,7 +242,7 @@
         disabled={!newName.trim()}
         class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 transition-colors"
       >
-        Create Workflow
+        {t('workflows.create')}
       </button>
     </div>
   {/if}
@@ -264,8 +271,8 @@
             <span class="text-xs text-slate-500">{wf.steps.length} steps</span>
             <span class="text-xs text-slate-500">{formatDate(wf.updated)}</span>
             {#if deleteConfirm === wf.id}
-              <button onclick={() => handleDelete(wf.id)} class="text-xs text-red-400 hover:text-red-300 font-medium">Confirm</button>
-              <button onclick={() => deleteConfirm = null} class="text-xs text-slate-500 hover:text-slate-300">Cancel</button>
+              <button onclick={() => handleDelete(wf.id)} class="text-xs text-red-400 hover:text-red-300 font-medium">{t('common.confirm')}</button>
+              <button onclick={() => deleteConfirm = null} class="text-xs text-slate-500 hover:text-slate-300">{t('common.cancel')}</button>
             {:else}
               <button onclick={() => editingId === wf.id ? (editingId = null) : startEdit(wf)} class="text-xs text-slate-500 hover:text-emerald-400 transition-colors" title="Edit">
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
@@ -335,13 +342,13 @@
                   {/each}
                 </div>
               {:else}
-                <p class="text-xs text-slate-600 italic">No variables</p>
+                <p class="text-xs text-slate-600 italic">{t('workflows.noVariablesShort')}</p>
               {/if}
             </div>
 
             <!-- Steps -->
             <div class="space-y-2">
-              <p class="text-xs font-medium text-slate-400">Steps</p>
+              <p class="text-xs font-medium text-slate-400">{ t('common.steps') }</p>
               {#each editSteps as step, i}
                 <div class="flex items-center gap-2">
                   <span class="text-xs text-slate-500 w-5 text-right">{i + 1}.</span>
@@ -355,7 +362,7 @@
                   <button onclick={() => removeEditStep(i)} class="text-red-400 hover:text-red-300 transition-colors">×</button>
                 </div>
               {/each}
-              <button onclick={addEditStep} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">+ Add step</button>
+              <button onclick={addEditStep} class="text-xs text-emerald-400 hover:text-emerald-300 transition-colors">{t('workflows.addStep')}</button>
             </div>
 
             <div class="flex gap-2">
@@ -363,13 +370,13 @@
                 onclick={handleUpdate}
                 class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 transition-colors"
               >
-                Save Changes
+                {t('workflows.saveChanges')}
               </button>
               <button
                 onclick={() => editingId = null}
                 class="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-400 hover:text-slate-200 transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </div>
@@ -400,7 +407,7 @@
         disabled={currentPage === 1}
         class="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-600 disabled:opacity-30 transition-colors"
       >
-        ← Prev
+        {t('common.prev')}
       </button>
       {#each Array(totalPages) as _, i}
         <button
@@ -415,23 +422,23 @@
         disabled={currentPage === totalPages}
         class="rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 hover:border-slate-600 disabled:opacity-30 transition-colors"
       >
-        Next →
+        {t('common.next')}
       </button>
     </div>
   {/if}
 
   {#if filtered.length === 0 && searchQuery}
     <div class="flex flex-col items-center justify-center py-16 text-slate-500">
-      <p class="text-sm">No workflows match "{searchQuery}"</p>
-      <p class="text-xs mt-1">Try a different search term</p>
+      <p class="text-sm">{t('workflows.noMatch', { query: searchQuery })}</p>
+      <p class="text-xs mt-1">{t('workflows.noMatchHint')}</p>
     </div>
   {:else if workflows.length === 0 && !showNew}
     <div class="flex flex-col items-center justify-center py-16 text-slate-500">
       <svg class="h-12 w-12 mb-3 opacity-50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm12-8a9 9 0 0 1-9 9" />
       </svg>
-      <p class="text-sm">No workflows yet</p>
-      <p class="text-xs mt-1">Create one to define reusable step sequences</p>
+      <p class="text-sm">{t('workflows.noWorkflows')}</p>
+      <p class="text-xs mt-1">{t('workflows.noWorkflowsHint')}</p>
     </div>
   {/if}
 </div>
