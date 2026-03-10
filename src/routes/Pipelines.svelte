@@ -30,6 +30,9 @@
   let editValidation = $state<PipelineValidation | null>(null);
   let editValidating = $state(false);
 
+  // --- Search/filter ---
+  let searchQuery = $state('');
+
   // --- Run results per saved pipeline ---
   let runResults = $state<Record<string, { result?: PipelineRunResult; error?: string; loading: boolean }>>({});
 
@@ -528,10 +531,34 @@
 
   <!-- Saved Pipelines -->
   {#if !loading && pipelines.length > 0}
+    {@const filtered = searchQuery.trim()
+      ? pipelines.filter(p => {
+          const q = searchQuery.toLowerCase();
+          return p.id.toLowerCase().includes(q)
+            || (p.description || '').toLowerCase().includes(q)
+            || p.expression.toLowerCase().includes(q);
+        })
+      : pipelines}
     <div>
-      <h2 class="text-sm font-semibold text-slate-300 mb-3">{void _i18n, t('pipelines.savedPipelines')}</h2>
+      <div class="flex items-center gap-3 mb-3">
+        <h2 class="text-sm font-semibold text-slate-300">{void _i18n, t('pipelines.savedPipelines')}</h2>
+        {#if pipelines.length > 3}
+          <div class="flex-1 max-w-xs">
+            <input
+              type="text"
+              bind:value={searchQuery}
+              placeholder="Search pipelines..."
+              class="w-full text-xs px-3 py-1.5 rounded-md bg-slate-800 border border-slate-700 text-slate-300 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+            />
+          </div>
+        {/if}
+        <span class="text-xs text-slate-500">{filtered.length}/{pipelines.length}</span>
+      </div>
+      {#if searchQuery && filtered.length === 0}
+        <p class="text-sm text-slate-500 py-8 text-center">No pipelines matching "{searchQuery}"</p>
+      {/if}
       <div class="space-y-3">
-        {#each pipelines as p}
+        {#each filtered as p}
           <div class="rounded-lg border border-slate-700/50 bg-slate-800 transition-all hover:border-slate-600">
             <!-- Header row -->
             <div class="flex items-center justify-between p-4">
