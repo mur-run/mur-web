@@ -17,6 +17,7 @@
   import CommanderWorkflows from './routes/CommanderWorkflows.svelte';
   import CommanderWorkflowDetail from './routes/CommanderWorkflowDetail.svelte';
   import AuditLog from './routes/AuditLog.svelte';
+  import Pipelines from './routes/Pipelines.svelte';
   import Sessions from './routes/Sessions.svelte';
   import SessionReview from './routes/SessionReview.svelte';
   import Toast from './components/Toast.svelte';
@@ -112,6 +113,7 @@
       { path: '/import', label: 'Import', icon: 'upload' },
       { path: '/graph', label: 'Graph', icon: 'share' },
       { path: '/workflows', label: t('nav.workflows'), icon: 'git-branch' },
+      { path: '/pipelines', label: t('nav.pipelines'), icon: 'zap' },
       { path: '/sessions', label: t('nav.sessions'), icon: 'clock' },
       { path: '/settings', label: t('nav.settings'), icon: 'settings' },
     ];
@@ -339,6 +341,8 @@
         <WorkflowEditor id={decodeURIComponent(workflowEditParams.id)} />
       {:else if currentRoute === '/workflows'}
         <Workflows />
+      {:else if currentRoute === '/pipelines'}
+        <Pipelines />
       {:else if currentRoute === '/sessions'}
         <Sessions />
       {:else if sessionReviewParams}

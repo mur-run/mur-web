@@ -75,6 +75,26 @@ export interface SessionDetail extends Session {
   events: SessionEvent[];
 }
 
+export interface Pipeline {
+  id: string;
+  expression: string;
+  description: string;
+  created?: string;
+  updated?: string;
+}
+
+export interface PipelineValidation {
+  valid: boolean;
+  ast?: unknown;
+  error?: string;
+}
+
+export interface PipelineRunResult {
+  output: string;
+  exit_code?: number;
+  duration?: number;
+}
+
 export interface PatternTemplate {
   name: string;
   icon: string;

@@ -1,4 +1,4 @@
-import type { Pattern, Workflow, DashboardStats, DataSource, Session, SessionDetail } from './types';
+import type { Pattern, Workflow, DashboardStats, DataSource, Session, SessionDetail, Pipeline, PipelineValidation, PipelineRunResult } from './types';
 import { mockPatterns, mockWorkflows } from './mock-data';
 import { adaptPattern, adaptWorkflow, unwrapList, unwrapOne } from './adapter';
 
@@ -216,6 +216,82 @@ export async function getSession(id: string): Promise<SessionDetail> {
 export async function extractWorkflowFromSession(sessionId: string): Promise<Workflow> {
   const raw = await apiPost<unknown>(`/workflows/extract-from-session/${sessionId}`, {});
   return adaptWorkflow(unwrapOne(raw) as any);
+}
+
+// --- Pipeline API ---
+
+let demoPipelines: Pipeline[] = [];
+
+export async function getPipelines(): Promise<Pipeline[]> {
+  if (dataSource === 'demo') return demoPipelines;
+  const raw = await apiGet<{ data: Pipeline[] }>('/pipelines');
+  return raw.data || [];
+}
+
+export async function getPipeline(id: string): Promise<Pipeline | undefined> {
+  if (dataSource === 'demo') return demoPipelines.find(p => p.id === id);
+  const raw = await apiGet<{ data: Pipeline }>(`/pipelines/${id}`);
+  return raw.data;
+}
+
+export async function createPipeline(pipeline: { id?: string; expression: string; description: string }): Promise<Pipeline> {
+  if (dataSource === 'demo') {
+    const newP: Pipeline = {
+      id: pipeline.id || `pipeline-${Date.now()}`,
+      expression: pipeline.expression,
+      description: pipeline.description,
+      created: new Date().toISOString(),
+      updated: new Date().toISOString(),
+    };
+    demoPipelines = [...demoPipelines, newP];
+    return newP;
+  }
+  const raw = await apiPost<{ data: Pipeline }>('/pipelines', pipeline);
+  return raw.data;
+}
+
+export async function updatePipeline(id: string, pipeline: Partial<Pipeline>): Promise<Pipeline> {
+  if (dataSource === 'demo') {
+    const idx = demoPipelines.findIndex(p => p.id === id);
+    if (idx === -1) throw new Error('Pipeline not found');
+    const updated = { ...demoPipelines[idx], ...pipeline, updated: new Date().toISOString() };
+    demoPipelines = [...demoPipelines.slice(0, idx), updated, ...demoPipelines.slice(idx + 1)];
+    return updated;
+  }
+  const raw = await apiPut<{ data: Pipeline }>(`/pipelines/${id}`, pipeline);
+  return raw.data;
+}
+
+export async function deletePipeline(id: string): Promise<void> {
+  if (dataSource === 'demo') {
+    demoPipelines = demoPipelines.filter(p => p.id !== id);
+    return;
+  }
+  await apiDelete(`/pipelines/${id}`);
+}
+
+export async function runPipeline(id: string): Promise<PipelineRunResult> {
+  if (dataSource === 'demo') {
+    return { output: `[demo] Pipeline "${id}" executed successfully`, exit_code: 0, duration: 1200 };
+  }
+  return apiPost<PipelineRunResult>(`/pipelines/${id}/run`, {});
+}
+
+export async function runPipelineExpression(expression: string): Promise<PipelineRunResult> {
+  if (dataSource === 'demo') {
+    return { output: `[demo] Expression executed: ${expression}`, exit_code: 0, duration: 800 };
+  }
+  return apiPost<PipelineRunResult>('/pipelines/run', { expression });
+}
+
+export async function validatePipeline(expression: string): Promise<PipelineValidation> {
+  if (dataSource === 'demo') {
+    const valid = expression.trim().length > 0 && !expression.includes('???');
+    return valid
+      ? { valid: true, ast: { type: 'pipeline', steps: expression.split('|').map(s => s.trim()) } }
+      : { valid: false, error: 'Invalid pipeline expression' };
+  }
+  return apiPost<PipelineValidation>('/pipelines/validate', { expression });
 }
 
 // --- Dashboard API ---

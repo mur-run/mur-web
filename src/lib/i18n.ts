@@ -8,6 +8,10 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.workflows': 'Workflows',
     'nav.sessions': 'Sessions',
     'nav.settings': 'Settings',
+    'nav.pipelines': 'Pipelines',
+
+    // Pipelines
+    'pipelines.title': 'Pipelines',
 
     // Common
     'common.save': 'Save',
@@ -164,6 +168,10 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.workflows': '工作流程',
     'nav.sessions': '會話',
     'nav.settings': '設定',
+    'nav.pipelines': '管線',
+
+    // Pipelines
+    'pipelines.title': '管線',
 
     // Common
     'common.save': '儲存',
@@ -320,6 +328,10 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.workflows': '工作流',
     'nav.sessions': '会话',
     'nav.settings': '设置',
+    'nav.pipelines': '管线',
+
+    // Pipelines
+    'pipelines.title': '管线',
 
     // Common
     'common.save': '保存',
