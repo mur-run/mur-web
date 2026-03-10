@@ -62,6 +62,13 @@ export interface Session {
   event_count: number;
   file_size: number;
   modified_at: string;
+  source?: string;
+  started_at?: string;
+  stopped_at?: string;
+  title?: string;
+  tools_used?: string[];
+  user_turns?: number;
+  assistant_turns?: number;
 }
 
 export interface SessionEvent {

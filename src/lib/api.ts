@@ -230,14 +230,135 @@ export async function searchWorkflows(query: string, limit: number = 10): Promis
 
 // --- Session API ---
 
+async function apiPatch<T>(path: string, body: unknown): Promise<T> {
+  await ensureBackend();
+  if (dataSource === 'demo') throw new Error('demo mode');
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}${apiPath(path)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    throw new Error(`Network error: server may be offline`);
+  }
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
+  return res.json();
+}
+
+const mockSessions: Session[] = [
+  {
+    id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    event_count: 26,
+    file_size: 5500,
+    modified_at: '2026-03-10T09:09:00Z',
+    source: 'claude-code',
+    started_at: '2026-03-10T09:00:00Z',
+    stopped_at: '2026-03-10T09:12:00Z',
+    title: 'Fix pipeline executor parallel mode',
+    tools_used: ['Bash', 'Read', 'Write'],
+    user_turns: 3,
+    assistant_turns: 8,
+  },
+  {
+    id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+    event_count: 42,
+    file_size: 12800,
+    modified_at: '2026-03-09T14:30:00Z',
+    source: 'codex',
+    started_at: '2026-03-09T14:00:00Z',
+    stopped_at: '2026-03-09T14:45:00Z',
+    title: 'Refactor authentication middleware',
+    tools_used: ['Read', 'Edit', 'Grep', 'Bash'],
+    user_turns: 7,
+    assistant_turns: 15,
+  },
+  {
+    id: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
+    event_count: 15,
+    file_size: 3200,
+    modified_at: '2026-03-09T10:15:00Z',
+    source: 'cursor',
+    started_at: '2026-03-09T10:00:00Z',
+    stopped_at: '2026-03-09T10:20:00Z',
+    title: 'Add unit tests for workflow service',
+    tools_used: ['Write', 'Bash'],
+    user_turns: 2,
+    assistant_turns: 5,
+  },
+  {
+    id: 'd4e5f6a7-b8c9-0123-defa-234567890123',
+    event_count: 58,
+    file_size: 22400,
+    modified_at: '2026-03-08T16:45:00Z',
+    source: 'claude-code',
+    started_at: '2026-03-08T15:30:00Z',
+    stopped_at: '2026-03-08T17:00:00Z',
+    title: 'Implement i18n for all dashboard pages',
+    tools_used: ['Read', 'Edit', 'Write', 'Glob', 'Grep'],
+    user_turns: 10,
+    assistant_turns: 22,
+  },
+  {
+    id: 'e5f6a7b8-c9d0-1234-efab-345678901234',
+    event_count: 8,
+    file_size: 1800,
+    modified_at: '2026-03-08T11:00:00Z',
+    source: 'claude-code',
+    started_at: '2026-03-08T10:50:00Z',
+    stopped_at: '2026-03-08T11:05:00Z',
+    title: 'Quick CSS fix for sidebar collapse',
+    tools_used: ['Read', 'Edit'],
+    user_turns: 1,
+    assistant_turns: 3,
+  },
+];
+
+let demoSessions = [...mockSessions];
+
 export async function getSessions(): Promise<Session[]> {
+  if (dataSource === 'demo') return demoSessions;
   const raw = await apiGet<{ data: Session[] }>('/sessions');
   return raw.data;
 }
 
 export async function getSession(id: string): Promise<SessionDetail> {
+  if (dataSource === 'demo') {
+    const s = demoSessions.find(s => s.id === id);
+    if (!s) throw new Error('Session not found');
+    return { ...s, events: [] };
+  }
   const raw = await apiGet<{ data: SessionDetail }>(`/sessions/${id}`);
   return raw.data;
+}
+
+export async function deleteSession(id: string): Promise<void> {
+  if (dataSource === 'demo') {
+    demoSessions = demoSessions.filter(s => s.id !== id);
+    return;
+  }
+  await apiDelete(`/sessions/${id}`);
+}
+
+export async function bulkDeleteSessions(ids: string[]): Promise<void> {
+  if (dataSource === 'demo') {
+    const idSet = new Set(ids);
+    demoSessions = demoSessions.filter(s => !idSet.has(s.id));
+    return;
+  }
+  await apiPost('/sessions/bulk-delete', { ids });
+}
+
+export async function updateSession(id: string, data: { title: string }): Promise<Session> {
+  if (dataSource === 'demo') {
+    const idx = demoSessions.findIndex(s => s.id === id);
+    if (idx === -1) throw new Error('Session not found');
+    demoSessions[idx] = { ...demoSessions[idx], ...data };
+    demoSessions = [...demoSessions];
+    return demoSessions[idx];
+  }
+  return apiPatch<Session>(`/sessions/${id}`, data);
 }
 
 // --- Extract Workflow from Session ---
