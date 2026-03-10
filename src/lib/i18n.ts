@@ -12,6 +12,24 @@ const translations: Record<Locale, Record<string, string>> = {
 
     // Pipelines
     'pipelines.title': 'Pipelines',
+    'pipelines.builder': 'Pipeline Builder',
+    'pipelines.workflows': 'Workflows',
+    'pipelines.dropHere': 'Drag workflows here or type an expression below',
+    'pipelines.expression': 'Expression',
+    'pipelines.run': 'Run',
+    'pipelines.savePipeline': 'Save',
+    'pipelines.savedPipelines': 'Saved Pipelines',
+    'pipelines.noPipelines': 'No pipelines yet',
+    'pipelines.noPipelinesHint': 'Build an expression above and save it',
+    'pipelines.pipelineId': 'Pipeline ID (auto-generated if empty)',
+    'pipelines.descPlaceholder': 'Description (optional)',
+    'pipelines.create': 'Create Pipeline',
+    'pipelines.validating': 'Validating...',
+    'pipelines.valid': 'Valid',
+    'pipelines.clickToToggle': 'Click to cycle: pipe | → then && → parallel ,',
+    'pipelines.noWorkflows': 'No workflows available',
+    'pipelines.expressionPlaceholder': 'e.g. lint | test && deploy',
+    'pipelines.dismiss': 'Dismiss',
 
     // Common
     'common.save': 'Save',
@@ -172,6 +190,24 @@ const translations: Record<Locale, Record<string, string>> = {
 
     // Pipelines
     'pipelines.title': '管線',
+    'pipelines.builder': '管線建構器',
+    'pipelines.workflows': '工作流程',
+    'pipelines.dropHere': '拖曳工作流程到此或在下方輸入表達式',
+    'pipelines.expression': '表達式',
+    'pipelines.run': '執行',
+    'pipelines.savePipeline': '儲存',
+    'pipelines.savedPipelines': '已儲存的管線',
+    'pipelines.noPipelines': '尚無管線',
+    'pipelines.noPipelinesHint': '在上方建構表達式並儲存',
+    'pipelines.pipelineId': '管線 ID（留空自動產生）',
+    'pipelines.descPlaceholder': '說明（選填）',
+    'pipelines.create': '建立管線',
+    'pipelines.validating': '驗證中...',
+    'pipelines.valid': '有效',
+    'pipelines.clickToToggle': '點擊切換：管道 | → 依序 && → 並行 ,',
+    'pipelines.noWorkflows': '無可用的工作流程',
+    'pipelines.expressionPlaceholder': '例如 lint | test && deploy',
+    'pipelines.dismiss': '關閉',
 
     // Common
     'common.save': '儲存',
@@ -332,6 +368,24 @@ const translations: Record<Locale, Record<string, string>> = {
 
     // Pipelines
     'pipelines.title': '管线',
+    'pipelines.builder': '管线构建器',
+    'pipelines.workflows': '工作流',
+    'pipelines.dropHere': '拖拽工作流到此或在下方输入表达式',
+    'pipelines.expression': '表达式',
+    'pipelines.run': '执行',
+    'pipelines.savePipeline': '保存',
+    'pipelines.savedPipelines': '已保存的管线',
+    'pipelines.noPipelines': '暂无管线',
+    'pipelines.noPipelinesHint': '在上方构建表达式并保存',
+    'pipelines.pipelineId': '管线 ID（留空自动生成）',
+    'pipelines.descPlaceholder': '描述（可选）',
+    'pipelines.create': '创建管线',
+    'pipelines.validating': '验证中...',
+    'pipelines.valid': '有效',
+    'pipelines.clickToToggle': '点击切换：管道 | → 顺序 && → 并行 ,',
+    'pipelines.noWorkflows': '无可用工作流',
+    'pipelines.expressionPlaceholder': '例如 lint | test && deploy',
+    'pipelines.dismiss': '关闭',
 
     // Common
     'common.save': '保存',

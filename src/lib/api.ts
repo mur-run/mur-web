@@ -54,43 +54,72 @@ function apiPath(path: string): string {
   return `/api/v1${path}`;
 }
 
+async function parseErrorResponse(res: Response): Promise<string> {
+  try {
+    const body = await res.json();
+    if (body?.error) return body.error;
+    if (body?.message) return body.message;
+  } catch { /* ignore parse errors */ }
+  return `API error: ${res.status} ${res.statusText}`;
+}
+
 async function apiGet<T>(path: string): Promise<T> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
-  const res = await fetch(`${baseUrl}${apiPath(path)}`);
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}${apiPath(path)}`);
+  } catch (e) {
+    throw new Error(`Network error: server may be offline`);
+  }
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
   return res.json();
 }
 
 async function apiPost<T>(path: string, body: unknown): Promise<T> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
-  const res = await fetch(`${baseUrl}${apiPath(path)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}${apiPath(path)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    throw new Error(`Network error: server may be offline`);
+  }
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
   return res.json();
 }
 
 async function apiPut<T>(path: string, body: unknown): Promise<T> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
-  const res = await fetch(`${baseUrl}${apiPath(path)}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}${apiPath(path)}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    throw new Error(`Network error: server may be offline`);
+  }
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
   return res.json();
 }
 
 async function apiDelete(path: string): Promise<void> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
-  const res = await fetch(`${baseUrl}${apiPath(path)}`, { method: 'DELETE' });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}${apiPath(path)}`, { method: 'DELETE' });
+  } catch (e) {
+    throw new Error(`Network error: server may be offline`);
+  }
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
 }
 
 // --- Pattern API ---
@@ -223,18 +252,21 @@ export async function extractWorkflowFromSession(sessionId: string): Promise<Wor
 let demoPipelines: Pipeline[] = [];
 
 export async function getPipelines(): Promise<Pipeline[]> {
+  await ensureBackend();
   if (dataSource === 'demo') return demoPipelines;
   const raw = await apiGet<{ data: Pipeline[] }>('/pipelines');
   return raw.data || [];
 }
 
 export async function getPipeline(id: string): Promise<Pipeline | undefined> {
+  await ensureBackend();
   if (dataSource === 'demo') return demoPipelines.find(p => p.id === id);
   const raw = await apiGet<{ data: Pipeline }>(`/pipelines/${id}`);
   return raw.data;
 }
 
 export async function createPipeline(pipeline: { id?: string; expression: string; description: string }): Promise<Pipeline> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     const newP: Pipeline = {
       id: pipeline.id || `pipeline-${Date.now()}`,
@@ -251,6 +283,7 @@ export async function createPipeline(pipeline: { id?: string; expression: string
 }
 
 export async function updatePipeline(id: string, pipeline: Partial<Pipeline>): Promise<Pipeline> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     const idx = demoPipelines.findIndex(p => p.id === id);
     if (idx === -1) throw new Error('Pipeline not found');
@@ -263,6 +296,7 @@ export async function updatePipeline(id: string, pipeline: Partial<Pipeline>): P
 }
 
 export async function deletePipeline(id: string): Promise<void> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     demoPipelines = demoPipelines.filter(p => p.id !== id);
     return;
@@ -271,6 +305,7 @@ export async function deletePipeline(id: string): Promise<void> {
 }
 
 export async function runPipeline(id: string): Promise<PipelineRunResult> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     return { output: `[demo] Pipeline "${id}" executed successfully`, exit_code: 0, duration: 1200 };
   }
@@ -278,18 +313,34 @@ export async function runPipeline(id: string): Promise<PipelineRunResult> {
 }
 
 export async function runPipelineExpression(expression: string): Promise<PipelineRunResult> {
+  await ensureBackend();
   if (dataSource === 'demo') {
-    return { output: `[demo] Expression executed: ${expression}`, exit_code: 0, duration: 800 };
+    const parts = expression.split(/\s*(&&|[|,])\s*/).filter(Boolean);
+    const steps = parts.filter(p => p !== '|' && p !== '&&' && p !== ',');
+    return {
+      output: `[demo] Executed pipeline: ${steps.join(' → ')}\nAll ${steps.length} workflow(s) completed successfully.`,
+      exit_code: 0,
+      duration: steps.length * 400,
+    };
   }
   return apiPost<PipelineRunResult>('/pipelines/run', { expression });
 }
 
 export async function validatePipeline(expression: string): Promise<PipelineValidation> {
+  await ensureBackend();
   if (dataSource === 'demo') {
-    const valid = expression.trim().length > 0 && !expression.includes('???');
-    return valid
-      ? { valid: true, ast: { type: 'pipeline', steps: expression.split('|').map(s => s.trim()) } }
-      : { valid: false, error: 'Invalid pipeline expression' };
+    const trimmed = expression.trim();
+    if (!trimmed) return { valid: false, error: 'Expression is empty' };
+    const parts = trimmed.split(/\s*(&&|[|,])\s*/).filter(Boolean);
+    const names: string[] = [];
+    const ops: string[] = [];
+    for (const p of parts) {
+      if (p === '|' || p === '&&' || p === ',') ops.push(p);
+      else names.push(p);
+    }
+    if (names.length === 0) return { valid: false, error: 'No workflow names found' };
+    if (ops.length >= names.length) return { valid: false, error: 'Invalid operator placement' };
+    return { valid: true, ast: { type: 'pipeline', steps: names, operators: ops } };
   }
   return apiPost<PipelineValidation>('/pipelines/validate', { expression });
 }

@@ -95,6 +95,8 @@ export interface PipelineRunResult {
   duration?: number;
 }
 
+export type PipelineOperator = '|' | '&&' | ',';
+
 export interface PatternTemplate {
   name: string;
   icon: string;
