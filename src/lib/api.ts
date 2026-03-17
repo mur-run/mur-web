@@ -127,18 +127,21 @@ async function apiDelete(path: string): Promise<void> {
 let demoPatterns = [...mockPatterns];
 
 export async function getPatterns(): Promise<Pattern[]> {
+  await ensureBackend();
   if (dataSource === 'demo') return demoPatterns;
   const raw = await apiGet<unknown>('/patterns');
   return unwrapList(raw).map(adaptPattern);
 }
 
 export async function getPattern(id: string): Promise<Pattern | undefined> {
+  await ensureBackend();
   if (dataSource === 'demo') return demoPatterns.find(p => p.id === id);
   const raw = await apiGet<unknown>(`/patterns/${id}`);
   return adaptPattern(unwrapOne(raw));
 }
 
 export async function createPattern(pattern: Omit<Pattern, 'id' | 'stats'>): Promise<Pattern> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     const newPattern: Pattern = {
       ...pattern,
@@ -152,6 +155,7 @@ export async function createPattern(pattern: Omit<Pattern, 'id' | 'stats'>): Pro
 }
 
 export async function updatePattern(id: string, pattern: Partial<Pattern>): Promise<Pattern> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     const idx = demoPatterns.findIndex(p => p.id === id);
     if (idx === -1) throw new Error('Pattern not found');
@@ -163,6 +167,7 @@ export async function updatePattern(id: string, pattern: Partial<Pattern>): Prom
 }
 
 export async function deletePattern(id: string): Promise<void> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     demoPatterns = demoPatterns.filter(p => p.id !== id);
     return;
@@ -175,12 +180,14 @@ export async function deletePattern(id: string): Promise<void> {
 let demoWorkflows = [...mockWorkflows];
 
 export async function getWorkflows(): Promise<Workflow[]> {
+  await ensureBackend();
   if (dataSource === 'demo') return demoWorkflows;
   const raw = await apiGet<unknown>('/workflows');
   return unwrapList(raw).map(adaptWorkflow);
 }
 
 export async function createWorkflow(wf: Omit<Workflow, 'id' | 'created' | 'updated'>): Promise<Workflow> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     const newWf: Workflow = { ...wf, id: `workflow-${Date.now()}`, created: new Date().toISOString(), updated: new Date().toISOString() };
     demoWorkflows = [...demoWorkflows, newWf];
@@ -191,6 +198,7 @@ export async function createWorkflow(wf: Omit<Workflow, 'id' | 'created' | 'upda
 }
 
 export async function updateWorkflow(id: string, wf: Partial<Workflow>): Promise<Workflow> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     const idx = demoWorkflows.findIndex(w => w.id === id);
     if (idx === -1) throw new Error('Workflow not found');
@@ -203,6 +211,7 @@ export async function updateWorkflow(id: string, wf: Partial<Workflow>): Promise
 }
 
 export async function deleteWorkflow(id: string): Promise<void> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     demoWorkflows = demoWorkflows.filter(w => w.id !== id);
     return;
@@ -217,6 +226,7 @@ export interface WorkflowSearchResult {
 }
 
 export async function searchWorkflows(query: string, limit: number = 10): Promise<WorkflowSearchResult[]> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     const q = query.toLowerCase();
     return demoWorkflows
@@ -318,12 +328,14 @@ const mockSessions: Session[] = [
 let demoSessions = [...mockSessions];
 
 export async function getSessions(): Promise<Session[]> {
+  await ensureBackend();
   if (dataSource === 'demo') return demoSessions;
   const raw = await apiGet<{ data: Session[] }>('/sessions');
   return raw.data;
 }
 
 export async function getSession(id: string): Promise<SessionDetail> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     const s = demoSessions.find(s => s.id === id);
     if (!s) throw new Error('Session not found');
@@ -334,6 +346,7 @@ export async function getSession(id: string): Promise<SessionDetail> {
 }
 
 export async function deleteSession(id: string): Promise<void> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     demoSessions = demoSessions.filter(s => s.id !== id);
     return;
@@ -342,6 +355,7 @@ export async function deleteSession(id: string): Promise<void> {
 }
 
 export async function bulkDeleteSessions(ids: string[]): Promise<void> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     const idSet = new Set(ids);
     demoSessions = demoSessions.filter(s => !idSet.has(s.id));
@@ -351,6 +365,7 @@ export async function bulkDeleteSessions(ids: string[]): Promise<void> {
 }
 
 export async function updateSession(id: string, data: { title: string }): Promise<Session> {
+  await ensureBackend();
   if (dataSource === 'demo') {
     const idx = demoSessions.findIndex(s => s.id === id);
     if (idx === -1) throw new Error('Session not found');

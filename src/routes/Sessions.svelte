@@ -463,8 +463,7 @@
               {/if}
               <div class="flex-1 min-w-0">
                 {#if editingTitleId === session.id}
-                  <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-                  <div class="flex items-center gap-1" onclick={(e) => e.stopPropagation()}>
+                  <div class="flex items-center gap-1" role="toolbar" tabindex="-1" onkeydown={(e) => e.stopPropagation()} onclick={(e) => e.stopPropagation()}>
                     <input
                       type="text"
                       bind:value={editingTitleValue}
@@ -486,8 +485,7 @@
               </div>
               <!-- Delete button -->
               {#if deleteConfirmId === session.id}
-                <!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
-                <div class="flex items-center gap-1" onclick={(e) => e.stopPropagation()}>
+                <div class="flex items-center gap-1" role="toolbar" tabindex="-1" onkeydown={(e) => e.stopPropagation()} onclick={(e) => e.stopPropagation()}>
                   <button onclick={() => handleDelete(session.id)} class="rounded bg-rose-600 px-2 py-0.5 text-[10px] text-white hover:bg-rose-500 transition-colors">{t('common.confirm')}</button>
                   <button onclick={() => deleteConfirmId = null} class="text-[10px] text-slate-400 hover:text-slate-300">{t('common.cancel')}</button>
                 </div>

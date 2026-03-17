@@ -38,8 +38,8 @@
   class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 transition-all hover:border-slate-600 {onclick ? 'cursor-pointer' : ''}"
   onclick={onclick}
   onkeydown={onclick ? (e) => { if (e.key === 'Enter') onclick?.() } : undefined}
-  role={onclick ? 'button' : undefined}
-  tabindex={onclick ? 0 : undefined}
+  role="button"
+  tabindex="0"
 >
   <div class="flex items-start gap-4">
     <HealthGauge score={healthScore} size={56} />

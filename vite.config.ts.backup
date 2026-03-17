@@ -7,14 +7,11 @@ export default defineConfig({
   // Custom domain (dashboard.mur.run) uses '/', override with MUR_BASE_PATH if needed
   base: process.env.MUR_BASE_PATH || '/',
   build: {
-    chunkSizeWarningLimit: 1000, // Increase limit to reduce warnings
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
           'mock-data': ['./src/lib/mock-data'],
-          'codemirror': ['codemirror', '@codemirror/lang-markdown', '@codemirror/lang-yaml', '@codemirror/theme-one-dark'],
-          'mermaid': ['mermaid'],
-          'lucide': ['lucide-svelte']
         },
       },
     },

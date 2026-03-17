@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getDataSource, setDataSource, detectBackend, getPatterns, getWorkflows } from '../lib/api';
-  import { getTheme, onThemeChange } from '../lib/theme';
+  import { getTheme, onThemeChange, setTheme } from '../lib/theme';
   import type { DataSource } from '../lib/types';
   import { t, subscribe as i18nSubscribe } from '../lib/i18n';
 
@@ -198,13 +198,13 @@
     <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('settings.theme')}</h2>
     <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 flex items-center gap-4">
       <button
-        onclick={() => { import('../lib/theme').then(m => m.setTheme('dark')); }}
+        onclick={() => { setTheme('dark'); }}
         class="rounded-lg border px-4 py-2 text-sm transition-colors {currentTheme === 'dark' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-slate-700 text-slate-400 hover:text-slate-200'}"
       >
         {t('settings.dark')}
       </button>
       <button
-        onclick={() => { import('../lib/theme').then(m => m.setTheme('light')); }}
+        onclick={() => { setTheme('light'); }}
         class="rounded-lg border px-4 py-2 text-sm transition-colors {currentTheme === 'light' ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400' : 'border-slate-700 text-slate-400 hover:text-slate-200'}"
       >
         {t('settings.light')}

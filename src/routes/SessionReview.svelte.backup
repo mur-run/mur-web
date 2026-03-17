@@ -265,13 +265,13 @@
                 <!-- Default -->
                 <input
                   id="session-name" type="text"
-                  placeholder="default"
+                  id="session-description" placeholder="default"
                   bind:value={editVariables[i].default_value}
                   class="w-32 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors"
                 />
                 <!-- Description -->
                 <input
-                  type="text"
+                  id="session-name" type="text"
                   id="session-description" placeholder="description"
                   bind:value={editVariables[i].description}
                   class="flex-1 min-w-[120px] rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 placeholder-slate-600 outline-none focus:border-emerald-500/50 transition-colors"

@@ -25,8 +25,8 @@
     weight: number;
   }
 
-  let nodes: Node[] = [];
-  let edges: Edge[] = [];
+  let nodes = $state<Node[]>([]);
+  let edges = $state<Edge[]>([]);
 
   const maturityColors: Record<string, string> = {
     Draft: '#94a3b8',

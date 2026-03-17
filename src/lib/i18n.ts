@@ -147,9 +147,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'sessions.back': 'Back to list',
 
     // Patterns
-    'patterns.title': 'Patterns',
     'patterns.count': '{filtered} of {total} patterns',
-    'patterns.searchPlaceholder': 'Search patterns...',
     'patterns.new': '+ New Pattern',
     'patterns.select': '☑ Select',
     'patterns.selected': '{count} selected',
@@ -286,8 +284,6 @@ const translations: Record<Locale, Record<string, string>> = {
     'session.detectedTools': '偵測到的工具',
 
     // Patterns page
-    'patterns.title': '模式',
-    'patterns.searchPlaceholder': '搜尋模式…',
 
     // Dashboard
     'dashboard.title': '儀表板',
@@ -339,26 +335,6 @@ const translations: Record<Locale, Record<string, string>> = {
     'sessions.back': '返回列表',
 
     // Patterns
-    'patterns.title': '模式',
-    'patterns.count': '{filtered} / {total} 個模式',
-    'patterns.searchPlaceholder': '搜尋模式…',
-    'patterns.new': '+ 新增模式',
-    'patterns.select': '☑ 選取',
-    'patterns.selected': '已選取 {count} 個',
-    'patterns.all': '全選',
-    'patterns.none': '取消全選',
-    'patterns.archive': '封存 ({count})',
-    'patterns.deleteBulk': '刪除 ({count})',
-    'patterns.deleteConfirm': '確定永久刪除 {count} 個模式？',
-    'patterns.allMaturity': '所有成熟度',
-    'patterns.allTiers': '所有層級',
-    'patterns.allTags': '所有標籤',
-    'patterns.sortName': '名稱',
-    'patterns.sortConfidence': '信心度',
-    'patterns.sortUpdated': '更新時間',
-    'patterns.noPatterns': '找不到模式',
-    'patterns.noPatternsHint': '試試調整篩選條件',
-    'patterns.injections': '次注入',
 
     // Settings
     'settings.title': '設定',
@@ -478,8 +454,6 @@ const translations: Record<Locale, Record<string, string>> = {
     'session.detectedTools': '检测到的工具',
 
     // Patterns page
-    'patterns.title': '模式',
-    'patterns.searchPlaceholder': '搜索模式…',
 
     // Dashboard
     'dashboard.title': '仪表盘',
@@ -531,26 +505,6 @@ const translations: Record<Locale, Record<string, string>> = {
     'sessions.back': '返回列表',
 
     // Patterns
-    'patterns.title': '模式',
-    'patterns.count': '{filtered} / {total} 个模式',
-    'patterns.searchPlaceholder': '搜索模式…',
-    'patterns.new': '+ 新建模式',
-    'patterns.select': '☑ 选择',
-    'patterns.selected': '已选 {count} 个',
-    'patterns.all': '全选',
-    'patterns.none': '取消全选',
-    'patterns.archive': '归档 ({count})',
-    'patterns.deleteBulk': '删除 ({count})',
-    'patterns.deleteConfirm': '确定永久删除 {count} 个模式？',
-    'patterns.allMaturity': '所有成熟度',
-    'patterns.allTiers': '所有层级',
-    'patterns.allTags': '所有标签',
-    'patterns.sortName': '名称',
-    'patterns.sortConfidence': '置信度',
-    'patterns.sortUpdated': '更新时间',
-    'patterns.noPatterns': '未找到模式',
-    'patterns.noPatternsHint': '试试调整筛选条件',
-    'patterns.injections': '次注入',
 
     // Settings
     'settings.title': '设置',
