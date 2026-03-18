@@ -2,7 +2,7 @@
 
 import type { CommanderWorkflow, AuditEntry, ExecutionResult, CommanderHealth } from './commander-types';
 
-const COMMANDER_URL = 'http://localhost:3939';
+const COMMANDER_URL = 'http://localhost:3940';
 
 let _connected = false;
 
@@ -12,7 +12,7 @@ export function isCommanderConnected(): boolean {
 
 export async function detectCommander(): Promise<boolean> {
   try {
-    const res = await fetch(`${COMMANDER_URL}/health`, { signal: AbortSignal.timeout(2000) });
+    const res = await fetch(`${COMMANDER_URL}/gateway/health`, { signal: AbortSignal.timeout(2000) });
     if (res.ok) {
       _connected = true;
       return true;

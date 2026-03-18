@@ -18,6 +18,8 @@ export function setDataSource(source: DataSource) {
   if (source === 'local') baseUrl = 'http://localhost:3847';
   else if (source === 'cloud') baseUrl = 'https://mur-server.fly.dev';
   else baseUrl = '';
+  // Persist choice so it survives page reloads
+  localStorage.setItem('mur-data-source', source);
 }
 
 export async function detectBackend(): Promise<DataSource> {
@@ -27,6 +29,31 @@ export async function detectBackend(): Promise<DataSource> {
 }
 
 async function doDetectBackend(): Promise<DataSource> {
+  // 1. Check if user previously chose a source
+  const saved = localStorage.getItem('mur-data-source') as DataSource | null;
+  if (saved && (saved === 'local' || saved === 'cloud' || saved === 'demo')) {
+    // Validate that the saved source is still reachable
+    if (saved === 'local') {
+      try {
+        const res = await fetch('http://localhost:3847/api/v1/health', { signal: AbortSignal.timeout(2000) });
+        if (res.ok) {
+          setDataSource('local');
+          backendResolved = true;
+          return 'local';
+        }
+      } catch { /* local no longer available, fall through */ }
+    } else if (saved === 'cloud') {
+      setDataSource('cloud');
+      backendResolved = true;
+      return 'cloud';
+    } else {
+      setDataSource('demo');
+      backendResolved = true;
+      return 'demo';
+    }
+  }
+
+  // 2. Auto-detect: try local first
   try {
     const res = await fetch('http://localhost:3847/api/v1/health', { signal: AbortSignal.timeout(2000) });
     if (res.ok) {
@@ -37,6 +64,20 @@ async function doDetectBackend(): Promise<DataSource> {
   } catch {
     // local not available
   }
+
+  // 3. Try cloud
+  try {
+    const res = await fetch('https://mur-server.fly.dev/health', { signal: AbortSignal.timeout(3000) });
+    if (res.ok) {
+      setDataSource('cloud');
+      backendResolved = true;
+      return 'cloud';
+    }
+  } catch {
+    // cloud not available
+  }
+
+  // 4. Fallback to demo
   setDataSource('demo');
   backendResolved = true;
   return 'demo';
