@@ -178,7 +178,7 @@
         </p>
       {/if}
     </div>
-    {#if session && !extractedWorkflow}
+    {#if session && !extractedWorkflow && !(window.location.hostname === 'dashboard.mur.run' || window.location.hostname === 'mur-run.github.io')}
       <button
         onclick={handleExtract}
         disabled={extracting}
