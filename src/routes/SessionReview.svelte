@@ -195,7 +195,7 @@
       </h1>
       {#if session}
         <p class="text-sm text-slate-400 mt-0.5">
-          {session.event_count} {t('session.events')} · {new Date(session.modified_at).toLocaleString()}
+          {session.event_count || session.events?.length || 0} {t('session.events')} · {new Date(session.modified_at || session.updated_at || session.stopped_at || session.created_at).toLocaleString()}
         </p>
       {/if}
     </div>
