@@ -65,19 +65,7 @@ async function doDetectBackend(): Promise<DataSource> {
     // local not available
   }
 
-  // 3. Try cloud
-  try {
-    const res = await fetch('https://mur-server.fly.dev/health', { signal: AbortSignal.timeout(3000) });
-    if (res.ok) {
-      setDataSource('cloud');
-      backendResolved = true;
-      return 'cloud';
-    }
-  } catch {
-    // cloud not available
-  }
-
-  // 4. Fallback to demo
+  // 3. Fallback to demo (cloud requires explicit selection in Settings)
   setDataSource('demo');
   backendResolved = true;
   return 'demo';
