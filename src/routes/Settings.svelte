@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getDataSource, setDataSource, detectBackend, getPatterns, getWorkflows } from '../lib/api';
+  import { getDataSource, setDataSource, detectBackend, getPatterns, getWorkflows, getAuthToken, setAuthToken } from '../lib/api';
   import { getTheme, onThemeChange, setTheme } from '../lib/theme';
   import type { DataSource } from '../lib/types';
   import { t, subscribe as i18nSubscribe } from '../lib/i18n';
@@ -11,6 +11,8 @@
   let currentTheme = $state(getTheme());
   let testStatus = $state<'idle' | 'testing' | 'ok' | 'fail'>('idle');
   let testMessage = $state('');
+  let authToken = $state(getAuthToken());
+  let tokenSaved = $state(false);
   let patternCount = $state(0);
   let workflowCount = $state(0);
 
@@ -164,6 +166,44 @@
             <span class="text-sm text-emerald-400">✓ {testMessage}</span>
           {:else if testStatus === 'fail'}
             <span class="text-sm text-red-400">✗ {testMessage}</span>
+          {/if}
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  <!-- Cloud Auth Token -->
+  {#if currentSource === 'cloud' || isHosted}
+    <section class="space-y-3">
+      <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">🔑 API Token</h2>
+      <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 space-y-3">
+        <p class="text-xs text-slate-400">
+          Required for relay commands to your Commander agent. Get your token from <code class="text-emerald-400">~/.mur/auth.json</code> (access_token field).
+        </p>
+        <input
+          type="password"
+          bind:value={authToken}
+          placeholder="Paste your JWT token here..."
+          aria-label="API auth token"
+          class="w-full rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200 outline-none focus:border-emerald-500/50 transition-colors font-mono"
+        />
+        <div class="flex items-center gap-3">
+          <button
+            onclick={() => { setAuthToken(authToken); tokenSaved = true; setTimeout(() => tokenSaved = false, 2000); }}
+            class="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white hover:bg-emerald-500 transition-colors"
+          >
+            Save Token
+          </button>
+          {#if authToken}
+            <button
+              onclick={() => { authToken = ''; setAuthToken(''); }}
+              class="rounded-lg bg-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-600 transition-colors"
+            >
+              Clear
+            </button>
+          {/if}
+          {#if tokenSaved}
+            <span class="text-sm text-emerald-400">✓ Saved</span>
           {/if}
         </div>
       </div>

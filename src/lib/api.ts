@@ -8,6 +8,21 @@ let baseUrl = '';
 // --- Relay Helper ---
 
 const RELAY_URL = 'https://mur-server.fly.dev/api/v1/relay/command';
+const AUTH_TOKEN_KEY = 'mur-auth-token';
+
+/** Get the stored auth token for cloud API calls. */
+export function getAuthToken(): string {
+  return localStorage.getItem(AUTH_TOKEN_KEY) ?? '';
+}
+
+/** Set the auth token for cloud API calls. */
+export function setAuthToken(token: string) {
+  if (token) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+  }
+}
 
 /**
  * Send a command to the Commander relay (cloud mode only).
@@ -15,13 +30,25 @@ const RELAY_URL = 'https://mur-server.fly.dev/api/v1/relay/command';
  */
 async function relayCommand<T = unknown>(action: string, params: object = {}, timeoutMs = 10000): Promise<T | null> {
   if (dataSource !== 'cloud') return null;
+  const token = getAuthToken();
+  if (!token) {
+    console.debug('[relay] no auth token configured — skipping relay');
+    return null;
+  }
   try {
     const res = await fetch(RELAY_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
       body: JSON.stringify({ action, params }),
       signal: AbortSignal.timeout(timeoutMs),
     });
+    if (res.status === 401) {
+      console.warn('[relay] auth token rejected (401) — check Settings');
+      return null;
+    }
     if (res.ok) {
       const result = await res.json();
       if (result.success) return result.data ?? null;
