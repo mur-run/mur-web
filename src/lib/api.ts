@@ -197,6 +197,25 @@ let demoWorkflows = [...mockWorkflows];
 export async function getWorkflows(): Promise<Workflow[]> {
   await ensureBackend();
   if (dataSource === 'demo') return demoWorkflows;
+
+  // Cloud mode: try relay first (reads local Commander workflows)
+  if (dataSource === 'cloud') {
+    try {
+      const { relayCommand, isRelayAgentOnline } = await import('./relay');
+      if (await isRelayAgentOnline()) {
+        const result = await relayCommand('list_workflows', {});
+        if (result.success && Array.isArray(result.data)) {
+          return (result.data as Workflow[]).map(w => ({
+            ...w,
+            id: w.id || w.name || `wf-${Date.now()}`,
+            created: w.created || new Date().toISOString(),
+            updated: w.updated || new Date().toISOString(),
+          }));
+        }
+      }
+    } catch { /* relay unavailable, fall through to API */ }
+  }
+
   const raw = await apiGet<unknown>('/workflows');
   return unwrapList(raw).map(adaptWorkflow);
 }
