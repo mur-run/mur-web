@@ -144,8 +144,12 @@ let demoPatterns = [...mockPatterns];
 export async function getPatterns(): Promise<Pattern[]> {
   await ensureBackend();
   if (dataSource === 'demo') return demoPatterns;
-  const raw = await apiGet<unknown>('/patterns');
-  return unwrapList(raw).map(adaptPattern);
+  try {
+    const raw = await apiGet<unknown>('/patterns');
+    return unwrapList(raw).map(adaptPattern);
+  } catch {
+    return [];
+  }
 }
 
 export async function getPattern(id: string): Promise<Pattern | undefined> {
