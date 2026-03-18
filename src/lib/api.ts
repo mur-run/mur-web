@@ -5,6 +5,33 @@ import { adaptPattern, adaptWorkflow, unwrapList, unwrapOne } from './adapter';
 let dataSource: DataSource = 'demo';
 let baseUrl = '';
 
+// --- Relay Helper ---
+
+const RELAY_URL = 'https://mur-server.fly.dev/api/v1/relay/command';
+
+/**
+ * Send a command to the Commander relay (cloud mode only).
+ * Returns the data on success, or null if relay is unavailable / not in cloud mode.
+ */
+async function relayCommand<T = unknown>(action: string, params: object = {}, timeoutMs = 10000): Promise<T | null> {
+  if (dataSource !== 'cloud') return null;
+  try {
+    const res = await fetch(RELAY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, params }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (res.ok) {
+      const result = await res.json();
+      if (result.success) return result.data ?? null;
+    }
+  } catch (e) {
+    console.debug(`[relay] ${action} unavailable:`, e);
+  }
+  return null;
+}
+
 // Backend detection promise — other API calls wait on this
 let backendReady: Promise<DataSource> | null = null;
 let backendResolved = false;
@@ -147,7 +174,8 @@ export async function getPatterns(): Promise<Pattern[]> {
   try {
     const raw = await apiGet<unknown>('/patterns');
     return unwrapList(raw).map(adaptPattern);
-  } catch {
+  } catch (e) {
+    console.warn('[api] getPatterns failed:', e);
     return [];
   }
 }
@@ -203,32 +231,21 @@ export async function getWorkflows(): Promise<Workflow[]> {
   if (dataSource === 'demo') return demoWorkflows;
 
   // Cloud mode: try relay first (reads local Commander workflows)
-  if (dataSource === 'cloud') {
-    try {
-      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'list_workflows', params: {} }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success && Array.isArray(result.data)) {
-          return (result.data as Workflow[]).map(w => ({
-            ...w,
-            id: w.id || w.name || `wf-${Date.now()}`,
-            created: w.created || new Date().toISOString(),
-            updated: w.updated || new Date().toISOString(),
-          }));
-        }
-      }
-    } catch { /* relay unavailable, fall through */ }
+  const relayWfs = await relayCommand<Workflow[]>('list_workflows');
+  if (relayWfs && Array.isArray(relayWfs)) {
+    return relayWfs.map(w => ({
+      ...w,
+      id: w.id || w.name || `wf-${Date.now()}`,
+      created: w.created || new Date().toISOString(),
+      updated: w.updated || new Date().toISOString(),
+    }));
   }
 
   try {
     const raw = await apiGet<unknown>('/workflows');
     return unwrapList(raw).map(adaptWorkflow);
-  } catch {
+  } catch (e) {
+    console.warn('[api] getWorkflows failed:', e);
     return [];
   }
 }
@@ -438,20 +455,8 @@ export async function getPipelines(): Promise<Pipeline[]> {
   await ensureBackend();
   if (dataSource === 'demo') return demoPipelines;
 
-  if (dataSource === 'cloud') {
-    try {
-      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'list_pipelines', params: {} }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success) return result.data || [];
-      }
-    } catch { /* relay unavailable, fall through */ }
-  }
+  const relayData = await relayCommand<Pipeline[]>('list_pipelines');
+  if (relayData) return relayData;
 
   const raw = await apiGet<{ data: Pipeline[] }>('/pipelines');
   return raw.data || [];
@@ -461,20 +466,8 @@ export async function getPipeline(id: string): Promise<Pipeline | undefined> {
   await ensureBackend();
   if (dataSource === 'demo') return demoPipelines.find(p => p.id === id);
 
-  if (dataSource === 'cloud') {
-    try {
-      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get_pipeline', params: { id } }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success) return result.data;
-      }
-    } catch { /* relay unavailable, fall through */ }
-  }
+  const relayData = await relayCommand<Pipeline>('get_pipeline', { id });
+  if (relayData) return relayData;
 
   const raw = await apiGet<{ data: Pipeline }>(`/pipelines/${id}`);
   return raw.data;
@@ -493,20 +486,8 @@ export async function createPipeline(pipeline: { id?: string; expression: string
     demoPipelines = [...demoPipelines, newP];
     return newP;
   }
-  if (dataSource === 'cloud') {
-    try {
-      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_pipeline', params: { pipeline } }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success) return result.data;
-      }
-    } catch { /* relay unavailable, fall through */ }
-  }
+  const relayData = await relayCommand<Pipeline>('create_pipeline', pipeline);
+  if (relayData) return relayData;
 
   const raw = await apiPost<{ data: Pipeline }>('/pipelines', pipeline);
   return raw.data;
@@ -521,20 +502,8 @@ export async function updatePipeline(id: string, pipeline: Partial<Pipeline>): P
     demoPipelines = [...demoPipelines.slice(0, idx), updated, ...demoPipelines.slice(idx + 1)];
     return updated;
   }
-  if (dataSource === 'cloud') {
-    try {
-      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_pipeline', params: { id, pipeline } }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success) return result.data;
-      }
-    } catch { /* relay unavailable, fall through */ }
-  }
+  const relayData = await relayCommand<Pipeline>('update_pipeline', { id, ...pipeline });
+  if (relayData) return relayData;
 
   const raw = await apiPut<{ data: Pipeline }>(`/pipelines/${id}`, pipeline);
   return raw.data;
@@ -547,20 +516,8 @@ export async function deletePipeline(id: string): Promise<void> {
     return;
   }
 
-  if (dataSource === 'cloud') {
-    try {
-      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_pipeline', params: { id } }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success) return;
-      }
-    } catch { /* relay unavailable, fall through */ }
-  }
+  const relayData = await relayCommand('delete_pipeline', { id });
+  if (relayData !== null) return;
 
   await apiDelete(`/pipelines/${id}`);
 }
@@ -571,20 +528,8 @@ export async function runPipeline(id: string): Promise<PipelineRunResult> {
     return { output: `[demo] Pipeline "${id}" executed successfully`, exit_code: 0, duration: 1200 };
   }
 
-  if (dataSource === 'cloud') {
-    try {
-      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'run_pipeline', params: { id } }),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success) return result.data;
-      }
-    } catch { /* relay unavailable, fall through */ }
-  }
+  const relayData = await relayCommand<PipelineRunResult>('run_pipeline', { id }, 30000);
+  if (relayData) return relayData;
 
   return apiPost<PipelineRunResult>(`/pipelines/${id}/run`, {});
 }
@@ -600,20 +545,8 @@ export async function runPipelineExpression(expression: string): Promise<Pipelin
       duration: steps.length * 400,
     };
   }
-  if (dataSource === 'cloud') {
-    try {
-      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'run_pipeline', params: { expression } }),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success) return result.data;
-      }
-    } catch { /* relay unavailable, fall through */ }
-  }
+  const relayData = await relayCommand<PipelineRunResult>('run_pipeline', { expression }, 30000);
+  if (relayData) return relayData;
 
   return apiPost<PipelineRunResult>('/pipelines/run', { expression });
 }
@@ -634,20 +567,8 @@ export async function validatePipeline(expression: string): Promise<PipelineVali
     if (ops.length >= names.length) return { valid: false, error: 'Invalid operator placement' };
     return { valid: true, ast: { type: 'pipeline', steps: names, operators: ops } };
   }
-  if (dataSource === 'cloud') {
-    try {
-      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'validate_pipeline', params: { expression } }),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success) return result.data;
-      }
-    } catch { /* relay unavailable, fall through */ }
-  }
+  const relayData = await relayCommand<PipelineValidation>('validate_pipeline', { expression }, 30000);
+  if (relayData) return relayData;
 
   return apiPost<PipelineValidation>('/pipelines/validate', { expression });
 }
