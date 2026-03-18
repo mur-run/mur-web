@@ -437,6 +437,22 @@ let demoPipelines: Pipeline[] = [];
 export async function getPipelines(): Promise<Pipeline[]> {
   await ensureBackend();
   if (dataSource === 'demo') return demoPipelines;
+
+  if (dataSource === 'cloud') {
+    try {
+      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list_pipelines', params: {} }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) return result.data || [];
+      }
+    } catch { /* relay unavailable, fall through */ }
+  }
+
   const raw = await apiGet<{ data: Pipeline[] }>('/pipelines');
   return raw.data || [];
 }
@@ -444,6 +460,22 @@ export async function getPipelines(): Promise<Pipeline[]> {
 export async function getPipeline(id: string): Promise<Pipeline | undefined> {
   await ensureBackend();
   if (dataSource === 'demo') return demoPipelines.find(p => p.id === id);
+
+  if (dataSource === 'cloud') {
+    try {
+      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_pipeline', params: { id } }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) return result.data;
+      }
+    } catch { /* relay unavailable, fall through */ }
+  }
+
   const raw = await apiGet<{ data: Pipeline }>(`/pipelines/${id}`);
   return raw.data;
 }
@@ -461,6 +493,21 @@ export async function createPipeline(pipeline: { id?: string; expression: string
     demoPipelines = [...demoPipelines, newP];
     return newP;
   }
+  if (dataSource === 'cloud') {
+    try {
+      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create_pipeline', params: { pipeline } }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) return result.data;
+      }
+    } catch { /* relay unavailable, fall through */ }
+  }
+
   const raw = await apiPost<{ data: Pipeline }>('/pipelines', pipeline);
   return raw.data;
 }
@@ -474,6 +521,21 @@ export async function updatePipeline(id: string, pipeline: Partial<Pipeline>): P
     demoPipelines = [...demoPipelines.slice(0, idx), updated, ...demoPipelines.slice(idx + 1)];
     return updated;
   }
+  if (dataSource === 'cloud') {
+    try {
+      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_pipeline', params: { id, pipeline } }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) return result.data;
+      }
+    } catch { /* relay unavailable, fall through */ }
+  }
+
   const raw = await apiPut<{ data: Pipeline }>(`/pipelines/${id}`, pipeline);
   return raw.data;
 }
@@ -484,6 +546,22 @@ export async function deletePipeline(id: string): Promise<void> {
     demoPipelines = demoPipelines.filter(p => p.id !== id);
     return;
   }
+
+  if (dataSource === 'cloud') {
+    try {
+      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete_pipeline', params: { id } }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) return;
+      }
+    } catch { /* relay unavailable, fall through */ }
+  }
+
   await apiDelete(`/pipelines/${id}`);
 }
 
@@ -492,6 +570,22 @@ export async function runPipeline(id: string): Promise<PipelineRunResult> {
   if (dataSource === 'demo') {
     return { output: `[demo] Pipeline "${id}" executed successfully`, exit_code: 0, duration: 1200 };
   }
+
+  if (dataSource === 'cloud') {
+    try {
+      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'run_pipeline', params: { id } }),
+        signal: AbortSignal.timeout(30000),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) return result.data;
+      }
+    } catch { /* relay unavailable, fall through */ }
+  }
+
   return apiPost<PipelineRunResult>(`/pipelines/${id}/run`, {});
 }
 
@@ -506,6 +600,21 @@ export async function runPipelineExpression(expression: string): Promise<Pipelin
       duration: steps.length * 400,
     };
   }
+  if (dataSource === 'cloud') {
+    try {
+      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'run_pipeline', params: { expression } }),
+        signal: AbortSignal.timeout(30000),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) return result.data;
+      }
+    } catch { /* relay unavailable, fall through */ }
+  }
+
   return apiPost<PipelineRunResult>('/pipelines/run', { expression });
 }
 
@@ -525,6 +634,21 @@ export async function validatePipeline(expression: string): Promise<PipelineVali
     if (ops.length >= names.length) return { valid: false, error: 'Invalid operator placement' };
     return { valid: true, ast: { type: 'pipeline', steps: names, operators: ops } };
   }
+  if (dataSource === 'cloud') {
+    try {
+      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'validate_pipeline', params: { expression } }),
+        signal: AbortSignal.timeout(30000),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success) return result.data;
+      }
+    } catch { /* relay unavailable, fall through */ }
+  }
+
   return apiPost<PipelineValidation>('/pipelines/validate', { expression });
 }
 
