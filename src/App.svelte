@@ -26,6 +26,7 @@
   import { load as loadData, refresh as refreshData, isLoaded } from './lib/dataStore';
   import { initTheme, toggleTheme, getTheme, onThemeChange } from './lib/theme';
   import { detectCommander, isCommanderConnected } from './lib/commander';
+  import { isRelayAgentOnline } from './lib/relay';
   import { t, getLocale, setLocale, getLocales, subscribe as i18nSubscribe } from './lib/i18n';
 
   let sidebarCollapsed = $state(false);
@@ -60,8 +61,14 @@
       } else if (source === 'cloud') {
         connect('https://mur-server.fly.dev');
       }
+      // Check Commander: local direct detection, or relay in cloud mode
+      detectCommander().then(ok => {
+        commanderAvailable = ok;
+        if (!ok && source === 'cloud') {
+          isRelayAgentOnline().then(online => { commanderAvailable = online; });
+        }
+      });
     });
-    detectCommander().then(ok => { commanderAvailable = ok; });
 
     const unsub = onEvent((evt) => {
       wsConnected = isConnected();

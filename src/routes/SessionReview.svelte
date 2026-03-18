@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { getSession, extractWorkflowFromSession, createWorkflow } from '../lib/api';
+  import { getSession, extractWorkflowFromSession, createWorkflow, getDataSource } from '../lib/api';
   import { navigate } from '../lib/router';
+  import { isRelayAgentOnline, relayCommand } from '../lib/relay';
   import type { SessionDetail, SessionEvent, Workflow, WorkflowVariable } from '../lib/types';
   import { t, subscribe as i18nSubscribe } from '../lib/i18n';
 
@@ -21,12 +22,22 @@
   let editTools = $state<string[]>([]);
   let editVariables = $state<WorkflowVariable[]>([]);
   let saving = $state(false);
+  let relayAvailable = $state(false);
 
   const varTypes = ['string', 'url', 'path', 'number', 'bool', 'array'] as const;
+
+  /** Can we show the extract button? Local mode always, cloud mode only with relay agent */
+  const canExtract = $derived(
+    getDataSource() === 'local' || (getDataSource() === 'cloud' && relayAvailable)
+  );
 
   $effect(() => {
     loadSession();
     const unsub = i18nSubscribe(() => _i18n++);
+    // Check relay agent status in cloud mode
+    if (getDataSource() === 'cloud') {
+      isRelayAgentOnline().then(ok => { relayAvailable = ok; });
+    }
     return unsub;
   });
 
@@ -90,7 +101,17 @@
     extracting = true;
     error = '';
     try {
-      const wf = await extractWorkflowFromSession(id);
+      let wf: Workflow;
+      if (getDataSource() === 'cloud') {
+        // Use relay to execute extract on the Commander agent
+        const result = await relayCommand('extract_workflow', { session_id: id });
+        if (!result.success) {
+          throw new Error(result.error || 'Relay command failed');
+        }
+        wf = result.data as Workflow;
+      } else {
+        wf = await extractWorkflowFromSession(id);
+      }
       extractedWorkflow = wf;
       editName = wf.name;
       editDesc = wf.description;
@@ -178,7 +199,7 @@
         </p>
       {/if}
     </div>
-    {#if session && !extractedWorkflow && !(window.location.hostname === 'dashboard.mur.run' || window.location.hostname === 'mur-run.github.io')}
+    {#if session && !extractedWorkflow && canExtract}
       <button
         onclick={handleExtract}
         disabled={extracting}
