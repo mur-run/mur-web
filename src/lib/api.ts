@@ -9,6 +9,12 @@ let baseUrl = '';
 let backendReady: Promise<DataSource> | null = null;
 let backendResolved = false;
 
+/** Is this the hosted dashboard (dashboard.mur.run / GitHub Pages)? */
+function isHosted(): boolean {
+  const h = window.location.hostname;
+  return h === 'dashboard.mur.run' || h === 'mur-run.github.io';
+}
+
 export function getDataSource(): DataSource {
   return dataSource;
 }
@@ -18,8 +24,6 @@ export function setDataSource(source: DataSource) {
   if (source === 'local') baseUrl = 'http://localhost:3847';
   else if (source === 'cloud') baseUrl = 'https://mur-server.fly.dev';
   else baseUrl = '';
-  // Persist choice so it survives page reloads
-  localStorage.setItem('mur-data-source', source);
 }
 
 export async function detectBackend(): Promise<DataSource> {
@@ -29,41 +33,14 @@ export async function detectBackend(): Promise<DataSource> {
 }
 
 async function doDetectBackend(): Promise<DataSource> {
-  // 1. Check if user previously chose a source
-  const saved = localStorage.getItem('mur-data-source') as DataSource | null;
-  if (saved && (saved === 'local' || saved === 'cloud' || saved === 'demo')) {
-    // Validate that the saved source is still reachable
-    if (saved === 'local') {
-      try {
-        const res = await fetch('http://localhost:3847/api/v1/health', { signal: AbortSignal.timeout(2000) });
-        if (res.ok) {
-          setDataSource('local');
-          backendResolved = true;
-          return 'local';
-        }
-      } catch { /* local no longer available, fall through */ }
-    } else if (saved === 'cloud') {
-      setDataSource('cloud');
-      backendResolved = true;
-      return 'cloud';
-    } else {
-      setDataSource('demo');
-      backendResolved = true;
-      return 'demo';
-    }
-  }
-
-  // 2. Auto-detect based on hostname
-  const isHosted = window.location.hostname === 'dashboard.mur.run' || window.location.hostname === 'mur-run.github.io';
-
-  if (isHosted) {
-    // Hosted dashboard → default to cloud
+  // Hosted dashboard → always cloud (can't reach localhost anyway)
+  if (isHosted()) {
     setDataSource('cloud');
     backendResolved = true;
     return 'cloud';
   }
 
-  // 3. Local dev / localhost → try local mur serve
+  // Localhost → try local mur serve, fallback to demo
   try {
     const res = await fetch('http://localhost:3847/api/v1/health', { signal: AbortSignal.timeout(2000) });
     if (res.ok) {
@@ -75,7 +52,6 @@ async function doDetectBackend(): Promise<DataSource> {
     // local not available
   }
 
-  // 4. Fallback to demo
   setDataSource('demo');
   backendResolved = true;
   return 'demo';

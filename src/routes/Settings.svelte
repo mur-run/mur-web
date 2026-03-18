@@ -84,11 +84,14 @@
     input.click();
   }
 
-  const sourceItems: { key: DataSource; label: string; icon: string; descKey: string }[] = [
-    { key: 'demo', label: 'Demo', icon: '👀', descKey: 'settings.demoDesc' },
-    { key: 'local', label: 'Local', icon: '🟢', descKey: 'settings.localDesc' },
-    { key: 'cloud', label: 'Cloud', icon: '☁️', descKey: 'settings.cloudDesc' },
-  ];
+  const isHosted = window.location.hostname === 'dashboard.mur.run' || window.location.hostname === 'mur-run.github.io';
+
+  const sourceItems: { key: DataSource; label: string; icon: string; descKey: string }[] = isHosted
+    ? [] // Hosted: no switcher, always cloud
+    : [
+        { key: 'demo', label: 'Demo', icon: '👀', descKey: 'settings.demoDesc' },
+        { key: 'local', label: 'Local', icon: '🟢', descKey: 'settings.localDesc' },
+      ];
 </script>
 
 <div class="space-y-8 max-w-2xl">
@@ -100,20 +103,28 @@
   <!-- Data Source -->
   <section class="space-y-3">
     <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">{t('settings.dataSource')}</h2>
-    <div class="grid grid-cols-3 gap-3">
-      {#each sourceItems as item}
-        <button
-          onclick={() => switchSource(item.key)}
-          class="rounded-lg border p-4 text-left transition-all {currentSource === item.key
-            ? 'border-emerald-500/50 bg-emerald-500/10'
-            : 'border-slate-700/50 bg-slate-800 hover:border-slate-600'}"
-        >
-          <div class="text-lg mb-1">{item.icon}</div>
-          <div class="text-sm font-medium {currentSource === item.key ? 'text-emerald-400' : 'text-slate-200'}">{item.label}</div>
-          <div class="text-[11px] text-slate-500 mt-0.5">{t(item.descKey)}</div>
-        </button>
-      {/each}
-    </div>
+    {#if isHosted}
+      <div class="rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-4">
+        <div class="text-lg mb-1">☁️</div>
+        <div class="text-sm font-medium text-emerald-400">Cloud</div>
+        <div class="text-[11px] text-slate-500 mt-0.5">Connected to mur-server.fly.dev</div>
+      </div>
+    {:else}
+      <div class="grid grid-cols-2 gap-3">
+        {#each sourceItems as item}
+          <button
+            onclick={() => switchSource(item.key)}
+            class="rounded-lg border p-4 text-left transition-all {currentSource === item.key
+              ? 'border-emerald-500/50 bg-emerald-500/10'
+              : 'border-slate-700/50 bg-slate-800 hover:border-slate-600'}"
+          >
+            <div class="text-lg mb-1">{item.icon}</div>
+            <div class="text-sm font-medium {currentSource === item.key ? 'text-emerald-400' : 'text-slate-200'}">{item.label}</div>
+            <div class="text-[11px] text-slate-500 mt-0.5">{t(item.descKey)}</div>
+          </button>
+        {/each}
+      </div>
+    {/if}
   </section>
 
   <!-- Connection -->
