@@ -115,9 +115,12 @@
       extractedWorkflow = wf;
       editName = wf.name;
       editDesc = wf.description;
-      editSteps = [...(wf.steps || [])];
+      // Steps may be strings or objects with {order, description}
+      editSteps = (wf.steps || []).map((s: unknown) =>
+        typeof s === 'string' ? s : (s as Record<string, unknown>)?.description as string || ''
+      ).filter(Boolean);
       editTools = [...(wf.tools || [])];
-      editVariables = (wf.variables || []).map(v => ({ ...v }));
+      editVariables = (wf.variables || []).map((v: Record<string, unknown>) => ({ ...v }));
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to extract workflow';
     } finally {
