@@ -161,9 +161,18 @@
       const wfData = {
         name: editName.trim(),
         description: editDesc.trim(),
-        steps: editSteps.filter(s => s.trim()),
+        steps: editSteps.filter(s => s.trim()).map((s, i) => ({
+          order: i + 1,
+          description: s.trim(),
+        })),
         tools: editTools,
-        variables: editVariables.filter(v => v.name.trim()),
+        variables: editVariables.filter(v => v.name.trim()).map(v => ({
+          name: v.name,
+          description: v.description || '',
+          default_value: v.default_value || '',
+          type: v.type || 'string',
+          required: v.required || false,
+        })),
       };
 
       if (getDataSource() === 'cloud' && relayAvailable) {
