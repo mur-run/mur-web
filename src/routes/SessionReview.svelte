@@ -158,13 +158,23 @@
     saving = true;
     error = '';
     try {
-      await createWorkflow({
+      const wfData = {
         name: editName.trim(),
         description: editDesc.trim(),
         steps: editSteps.filter(s => s.trim()),
         tools: editTools,
         variables: editVariables.filter(v => v.name.trim()),
-      });
+      };
+
+      if (getDataSource() === 'cloud' && relayAvailable) {
+        // Save via Commander relay
+        const result = await relayCommand('save_workflow', { workflow: wfData });
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to save workflow via relay');
+        }
+      } else {
+        await createWorkflow(wfData);
+      }
       navigate('/workflows');
     } catch (e) {
       error = e instanceof Error ? e.message : 'Failed to save workflow';
