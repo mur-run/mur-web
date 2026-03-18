@@ -201,9 +201,14 @@ export async function getWorkflows(): Promise<Workflow[]> {
   // Cloud mode: try relay first (reads local Commander workflows)
   if (dataSource === 'cloud') {
     try {
-      const { relayCommand, isRelayAgentOnline } = await import('./relay');
-      if (await isRelayAgentOnline()) {
-        const result = await relayCommand('list_workflows', {});
+      const res = await fetch('https://mur-server.fly.dev/api/v1/relay/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'list_workflows', params: {} }),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const result = await res.json();
         if (result.success && Array.isArray(result.data)) {
           return (result.data as Workflow[]).map(w => ({
             ...w,
@@ -213,11 +218,15 @@ export async function getWorkflows(): Promise<Workflow[]> {
           }));
         }
       }
-    } catch { /* relay unavailable, fall through to API */ }
+    } catch { /* relay unavailable, fall through */ }
   }
 
-  const raw = await apiGet<unknown>('/workflows');
-  return unwrapList(raw).map(adaptWorkflow);
+  try {
+    const raw = await apiGet<unknown>('/workflows');
+    return unwrapList(raw).map(adaptWorkflow);
+  } catch {
+    return [];
+  }
 }
 
 export async function createWorkflow(wf: Omit<Workflow, 'id' | 'created' | 'updated'>): Promise<Workflow> {
