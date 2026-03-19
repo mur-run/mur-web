@@ -170,12 +170,18 @@ async function parseErrorResponse(res: Response): Promise<string> {
   return `API error: ${res.status} ${res.statusText}`;
 }
 
+/** Build auth headers if token is available. */
+function authHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 async function apiGet<T>(path: string): Promise<T> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
   let res: Response;
   try {
-    res = await fetch(`${baseUrl}${apiPath(path)}`);
+    res = await fetch(`${baseUrl}${apiPath(path)}`, { headers: authHeaders() });
   } catch (e) {
     throw new Error(`Network error: server may be offline`);
   }
@@ -190,7 +196,7 @@ async function apiPost<T>(path: string, body: unknown): Promise<T> {
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(body),
     });
   } catch (e) {
@@ -207,7 +213,7 @@ async function apiPut<T>(path: string, body: unknown): Promise<T> {
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(body),
     });
   } catch (e) {
@@ -222,7 +228,7 @@ async function apiDelete(path: string): Promise<void> {
   if (dataSource === 'demo') throw new Error('demo mode');
   let res: Response;
   try {
-    res = await fetch(`${baseUrl}${apiPath(path)}`, { method: 'DELETE' });
+    res = await fetch(`${baseUrl}${apiPath(path)}`, { method: 'DELETE', headers: authHeaders() });
   } catch (e) {
     throw new Error(`Network error: server may be offline`);
   }
@@ -376,7 +382,7 @@ async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       body: JSON.stringify(body),
     });
   } catch (e) {
