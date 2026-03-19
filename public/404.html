@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script>
+  // GitHub Pages SPA redirect + OAuth callback handler
+  var path = window.location.pathname;
+  var search = window.location.search;
+
+  if (path === '/auth/callback' || path === '/auth/callback/') {
+    // OAuth callback — store token and redirect to SPA with target route
+    var params = new URLSearchParams(search);
+    var token = params.get('access_token');
+    var state = params.get('state') || '/';
+    var error = params.get('error');
+
+    if (token) {
+      try { localStorage.setItem('mur-auth-token', token); } catch (e) {}
+      window.location.replace('/#' + state);
+    } else if (error) {
+      window.location.replace('/#/?login_error=' + encodeURIComponent(error));
+    } else {
+      window.location.replace('/');
+    }
+  } else {
+    // Other paths — redirect to hash-based SPA route
+    window.location.replace('/#' + path);
+  }
+</script>
+</head>
+<body></body>
+</html>

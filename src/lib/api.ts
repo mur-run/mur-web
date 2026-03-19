@@ -46,7 +46,11 @@ async function relayCommand<T = unknown>(action: string, params: object = {}, ti
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (res.status === 401) {
-      console.warn('[relay] auth token rejected (401) — check Settings');
+      console.warn('[relay] auth token rejected (401)');
+      if (isHosted()) {
+        setAuthToken('');
+        redirectToLogin();
+      }
       return null;
     }
     if (res.ok) {
@@ -67,6 +71,34 @@ let backendResolved = false;
 function isHosted(): boolean {
   const h = window.location.hostname;
   return h === 'dashboard.mur.run' || h === 'mur-run.github.io';
+}
+
+/** Public version of isHosted for auth flow checks. */
+export function isHostedDashboard(): boolean {
+  return isHosted();
+}
+
+/** Returns true if auth is satisfied (either not hosted, or has a token). */
+export function requireAuth(): boolean {
+  if (!isHosted()) return true;
+  return !!getAuthToken();
+}
+
+/** Redirect to GitHub OAuth login via mur-server. */
+export function redirectToLogin(targetRoute?: string) {
+  const state = targetRoute || window.location.hash.slice(1) || '/';
+  const authUrl = 'https://mur-server.fly.dev/api/v1/core/auth/github?redirect_uri=' +
+    encodeURIComponent('https://dashboard.mur.run/auth/callback') +
+    '&state=' + encodeURIComponent(state);
+  window.location.href = authUrl;
+}
+
+/** Clear auth token and reset to home (for hosted dashboard). */
+export function logout() {
+  setAuthToken('');
+  if (isHosted()) {
+    window.location.hash = '#/';
+  }
 }
 
 export function getDataSource(): DataSource {

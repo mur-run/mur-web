@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { detectBackend, getDataSource } from './lib/api';
+  import { detectBackend, getDataSource, requireAuth, redirectToLogin } from './lib/api';
   import { connect, disconnect, onEvent, isConnected } from './lib/realtime';
   import { getCurrentRoute, navigate, matchRoute } from './lib/router';
   import Dashboard from './routes/Dashboard.svelte';
@@ -89,6 +89,25 @@
       unsub();
       disconnect();
     };
+  });
+
+  // Auth guard for cloud/hosted mode — redirect to OAuth if no token
+  $effect(() => {
+    if (dataSource === 'cloud' && !requireAuth()) {
+      redirectToLogin(currentRoute);
+    }
+  });
+
+  // Check for login error in hash params (from OAuth redirect)
+  $effect(() => {
+    const hash = window.location.hash;
+    if (hash.includes('login_error=')) {
+      const match = hash.match(/login_error=([^&]*)/);
+      if (match) {
+        showToast('Login failed: ' + decodeURIComponent(match[1]), 'error');
+        window.history.replaceState(null, '', window.location.pathname + '#/');
+      }
+    }
   });
 
   // Hash routing

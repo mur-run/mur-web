@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getDataSource, setDataSource, detectBackend, getPatterns, getWorkflows, getAuthToken, setAuthToken } from '../lib/api';
+  import { getDataSource, setDataSource, detectBackend, getPatterns, getWorkflows, getAuthToken, setAuthToken, isHostedDashboard, logout } from '../lib/api';
   import { getTheme, onThemeChange, setTheme } from '../lib/theme';
   import type { DataSource } from '../lib/types';
   import { t, subscribe as i18nSubscribe } from '../lib/i18n';
@@ -172,10 +172,31 @@
     </section>
   {/if}
 
-  <!-- Cloud Auth Token -->
-  {#if currentSource === 'cloud' || isHosted}
+  <!-- Account (hosted dashboard with OAuth) -->
+  {#if isHosted && authToken}
     <section class="space-y-3">
-      <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">🔑 API Token</h2>
+      <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">Account</h2>
+      <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-sm text-slate-200">Logged in via GitHub</span>
+            <p class="text-xs text-slate-500 mt-0.5">Authenticated with OAuth token</p>
+          </div>
+          <button
+            onclick={() => { logout(); }}
+            class="rounded-lg bg-red-600/20 border border-red-500/30 px-4 py-2 text-sm text-red-400 hover:bg-red-600/30 transition-colors"
+          >
+            Log out
+          </button>
+        </div>
+      </div>
+    </section>
+  {/if}
+
+  <!-- Cloud Auth Token (manual entry for non-hosted or when no OAuth token) -->
+  {#if (currentSource === 'cloud' || isHosted) && !isHostedDashboard()}
+    <section class="space-y-3">
+      <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wider">API Token</h2>
       <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 space-y-3">
         <p class="text-xs text-slate-400">
           Required for relay commands to your Commander agent. Get your token from <code class="text-emerald-400">~/.mur/auth.json</code> (access_token field).
