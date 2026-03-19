@@ -91,17 +91,23 @@
     };
   });
 
-  // OAuth callback handler — extract token from URL and redirect to target
+  // OAuth callback handler — extract token from URL and redirect to target.
+  // Flow: /auth/callback?token=...&state=... → (index.html redirect) →
+  //       /#/auth/callback?token=...&state=... → (this effect handles it)
   $effect(() => {
     if (currentRoute.startsWith('/auth/callback')) {
-      const hashParts = window.location.hash.split('?');
-      const params = new URLSearchParams(hashParts[1] || '');
+      // Params are after the ? in the hash: #/auth/callback?access_token=...
+      const hashStr = window.location.hash;
+      const qIdx = hashStr.indexOf('?');
+      const params = qIdx >= 0 ? new URLSearchParams(hashStr.slice(qIdx)) : new URLSearchParams();
       const accessToken = params.get('access_token');
       const targetState = params.get('state') || '/';
       if (accessToken) {
         setAuthToken(accessToken);
+        // Clean the URL and navigate to target
         window.location.hash = '#' + targetState;
       } else {
+        // No token — OAuth failed or was cancelled
         window.location.hash = '#/settings';
       }
     }

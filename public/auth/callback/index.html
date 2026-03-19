@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>MUR — Logging in...</title>
+<script>
+  // OAuth callback landing page for GitHub Pages (hash routing).
+  // Converts /auth/callback?access_token=...&state=... into
+  // /#/auth/callback?access_token=...&state=... so the SPA can handle it.
+  var params = window.location.search;
+  window.location.replace('/' + '#/auth/callback' + params);
+</script>
+</head>
+<body style="background:#0f172a;color:#94a3b8;display:flex;justify-content:center;align-items:center;height:100vh;font-family:system-ui">
+  <p>🔐 Logging in...</p>
+</body>
+</html>
