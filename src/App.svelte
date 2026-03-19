@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { detectBackend, getDataSource, requireAuth, redirectToLogin } from './lib/api';
+  import { detectBackend, getDataSource, requireAuth, redirectToLogin, setAuthToken } from './lib/api';
   import { connect, disconnect, onEvent, isConnected } from './lib/realtime';
   import { getCurrentRoute, navigate, matchRoute } from './lib/router';
   import Dashboard from './routes/Dashboard.svelte';
@@ -91,9 +91,25 @@
     };
   });
 
+  // OAuth callback handler — extract token from URL and redirect to target
+  $effect(() => {
+    if (currentRoute.startsWith('/auth/callback')) {
+      const hashParts = window.location.hash.split('?');
+      const params = new URLSearchParams(hashParts[1] || '');
+      const accessToken = params.get('access_token');
+      const targetState = params.get('state') || '/';
+      if (accessToken) {
+        setAuthToken(accessToken);
+        window.location.hash = '#' + targetState;
+      } else {
+        window.location.hash = '#/settings';
+      }
+    }
+  });
+
   // Auth guard for cloud/hosted mode — redirect to OAuth if no token
   $effect(() => {
-    if (dataSource === 'cloud' && !requireAuth()) {
+    if (dataSource === 'cloud' && !requireAuth() && !currentRoute.startsWith('/auth/callback')) {
       redirectToLogin(currentRoute);
     }
   });
@@ -353,7 +369,12 @@
 
     <!-- Content area -->
     <main class="flex-1 overflow-auto p-6" data-route={currentRoute}>
-      {#if currentRoute === '/' || currentRoute === ''}
+      {#if currentRoute.startsWith('/auth/callback')}
+        <!-- OAuth callback: handled by effect below -->
+        <div class="flex items-center justify-center h-full text-slate-400">
+          <p>🔐 Logging in...</p>
+        </div>
+      {:else if currentRoute === '/' || currentRoute === ''}
         <Dashboard />
       {:else if currentRoute === '/patterns'}
         <Patterns />
