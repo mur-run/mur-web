@@ -20,6 +20,7 @@
   import Pipelines from './routes/Pipelines.svelte';
   import Sessions from './routes/Sessions.svelte';
   import SessionReview from './routes/SessionReview.svelte';
+  import Schedules from './routes/Schedules.svelte';
   import Login from './routes/Login.svelte';
   import Toast from './components/Toast.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
@@ -164,6 +165,7 @@
       { path: '/workflows', label: t('nav.workflows'), icon: 'git-branch' },
       { path: '/pipelines', label: t('nav.pipelines'), icon: 'zap' },
       { path: '/sessions', label: t('nav.sessions'), icon: 'clock' },
+      { path: '/schedules', label: 'Schedules', icon: 'calendar' },
       { path: '/settings', label: t('nav.settings'), icon: 'settings' },
     ];
   });
@@ -186,6 +188,7 @@
       terminal: 'M4 17l6-5-6-5M12 19h8',
       'file-text': 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8',
       clock: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 6v6l4 2',
+      calendar: 'M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18',
     };
     return icons[icon] || '';
   }
@@ -406,6 +409,8 @@
         <Pipelines />
       {:else if currentRoute === '/sessions'}
         <Sessions />
+      {:else if currentRoute === '/schedules'}
+        <Schedules />
       {:else if sessionReviewParams}
         <SessionReview id={sessionReviewParams.id} />
       {:else if currentRoute === '/commander'}
