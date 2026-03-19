@@ -157,7 +157,15 @@ async function ensureBackend(): Promise<void> {
   await backendReady;
 }
 
+/** Core API paths that need /core/ prefix on the cloud server. */
+const corePaths = ['/sessions', '/patterns', '/commander', '/teams', '/devices', '/settings', '/user', '/api-keys', '/admin'];
+
 function apiPath(path: string): string {
+  // Cloud server nests core routes under /api/v1/core/
+  // Local mur-serve uses /api/v1/ directly
+  if (dataSource === 'cloud' && corePaths.some(p => path.startsWith(p))) {
+    return `/api/v1/core${path}`;
+  }
   return `/api/v1${path}`;
 }
 
