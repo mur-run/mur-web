@@ -1,5 +1,6 @@
 import { mount } from 'svelte'
 import './app.css'
+import App from './App.svelte'
 
 // Handle OAuth callback before mounting the app.
 // The server redirects to: https://dashboard.mur.run/auth/callback?access_token=...&state=/route
@@ -26,17 +27,9 @@ function handleOAuthCallback(): boolean {
 }
 
 if (!handleOAuthCallback()) {
-  // Check for login error passed via hash query
-  const hash = window.location.hash;
-  if (hash.includes('login_error=')) {
-    // Will be handled by App.svelte after mount
-  }
-
-  import('./App.svelte').then(({ default: App }) => {
-    mount(App, {
-      target: document.getElementById('app')!,
-    })
-  });
+  mount(App, {
+    target: document.getElementById('app')!,
+  })
 }
 
 // Init keyboard shortcuts
