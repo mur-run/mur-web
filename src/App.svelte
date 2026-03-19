@@ -20,6 +20,7 @@
   import Pipelines from './routes/Pipelines.svelte';
   import Sessions from './routes/Sessions.svelte';
   import SessionReview from './routes/SessionReview.svelte';
+  import Login from './routes/Login.svelte';
   import Toast from './components/Toast.svelte';
   import CommandPalette from './components/CommandPalette.svelte';
   import { showToast } from './lib/toast';
@@ -115,7 +116,7 @@
 
   // Auth guard for cloud/hosted mode — redirect to OAuth if no token
   $effect(() => {
-    if (dataSource === 'cloud' && !requireAuth() && !currentRoute.startsWith('/auth/callback')) {
+    if (dataSource === 'cloud' && !requireAuth() && !currentRoute.startsWith('/auth/callback') && !currentRoute.startsWith('/login')) {
       redirectToLogin(currentRoute);
     }
   });
@@ -203,6 +204,18 @@
   const workflowEditParams = $derived(matchRoute('/workflows/:id/edit', currentRoute));
 </script>
 
+{#if currentRoute.startsWith('/login') || currentRoute.startsWith('/auth/callback')}
+  <!-- Full-screen layout for login/callback (no sidebar) -->
+  <div class="h-screen bg-slate-900">
+    {#if currentRoute.startsWith('/auth/callback')}
+      <div class="flex items-center justify-center h-full text-slate-400">
+        <p>🔐 Logging in...</p>
+      </div>
+    {:else}
+      <Login />
+    {/if}
+  </div>
+{:else}
 <div class="flex h-screen overflow-hidden bg-slate-900">
   <!-- Mobile sidebar overlay (#7 fix) -->
   {#if mobileMenuOpen}
@@ -375,12 +388,7 @@
 
     <!-- Content area -->
     <main class="flex-1 overflow-auto p-6" data-route={currentRoute}>
-      {#if currentRoute.startsWith('/auth/callback')}
-        <!-- OAuth callback: handled by effect below -->
-        <div class="flex items-center justify-center h-full text-slate-400">
-          <p>🔐 Logging in...</p>
-        </div>
-      {:else if currentRoute === '/' || currentRoute === ''}
+      {#if currentRoute === '/' || currentRoute === ''}
         <Dashboard />
       {:else if currentRoute === '/patterns'}
         <Patterns />
@@ -424,6 +432,7 @@
     </main>
   </div>
 </div>
+{/if}
 
 <Toast />
 <CommandPalette />

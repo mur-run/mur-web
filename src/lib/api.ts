@@ -84,13 +84,19 @@ export function requireAuth(): boolean {
   return !!getAuthToken();
 }
 
-/** Redirect to GitHub OAuth login via mur-server. */
-export function redirectToLogin(targetRoute?: string) {
+/** Redirect to OAuth login via mur-server.
+ *  If no provider given, shows the login page with provider choices. */
+export function redirectToLogin(targetRoute?: string, provider?: string) {
   const state = targetRoute || window.location.hash.slice(1) || '/';
-  const authUrl = 'https://mur-server.fly.dev/api/v1/core/auth/github?redirect_uri=' +
-    encodeURIComponent('https://dashboard.mur.run/auth/callback') +
-    '&state=' + encodeURIComponent(state);
-  window.location.href = authUrl;
+  if (provider) {
+    const authUrl = 'https://mur-server.fly.dev/api/v1/core/auth/' + provider + '?redirect_uri=' +
+      encodeURIComponent('https://dashboard.mur.run/auth/callback') +
+      '&state=' + encodeURIComponent(state);
+    window.location.href = authUrl;
+  } else {
+    // Show login page with provider selection
+    window.location.hash = '#/login?redirect=' + encodeURIComponent(state);
+  }
 }
 
 /** Clear auth token and reset to home (for hosted dashboard). */
