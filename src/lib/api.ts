@@ -2,6 +2,43 @@ import type { Pattern, Workflow, DashboardStats, DataSource, Session, SessionDet
 import { mockPatterns, mockWorkflows } from './mock-data';
 import { adaptPattern, adaptWorkflow, unwrapList, unwrapOne } from './adapter';
 
+// --- ApiError ---
+
+export type ApiErrorKind = 'network' | 'auth' | 'not_found' | 'server' | 'validation' | 'unknown';
+
+export class ApiError extends Error {
+  readonly status: number;
+  readonly kind: ApiErrorKind;
+  readonly endpoint: string;
+
+  constructor(message: string, status: number, kind: ApiErrorKind, endpoint: string = '') {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.kind = kind;
+    this.endpoint = endpoint;
+  }
+
+  /** True for 5xx or network errors — caller may want to retry. */
+  get retryable(): boolean {
+    return this.kind === 'network' || this.kind === 'server';
+  }
+
+  static fromStatus(status: number, message: string, endpoint: string = ''): ApiError {
+    let kind: ApiErrorKind;
+    if (status === 401 || status === 403) kind = 'auth';
+    else if (status === 404) kind = 'not_found';
+    else if (status === 422 || status === 400) kind = 'validation';
+    else if (status >= 500) kind = 'server';
+    else kind = 'unknown';
+    return new ApiError(message, status, kind, endpoint);
+  }
+
+  static network(message: string, endpoint: string = ''): ApiError {
+    return new ApiError(message, 0, 'network', endpoint);
+  }
+}
+
 let dataSource: DataSource = 'demo';
 let baseUrl = '';
 
@@ -169,13 +206,14 @@ function apiPath(path: string): string {
   return `/api/v1${path}`;
 }
 
-async function parseErrorResponse(res: Response): Promise<string> {
+async function parseErrorResponse(res: Response, endpoint: string = ''): Promise<ApiError> {
+  let message = `API error: ${res.status} ${res.statusText}`;
   try {
     const body = await res.json();
-    if (body?.error) return body.error;
-    if (body?.message) return body.message;
+    if (body?.error) message = body.error;
+    else if (body?.message) message = body.message;
   } catch { /* ignore parse errors */ }
-  return `API error: ${res.status} ${res.statusText}`;
+  return ApiError.fromStatus(res.status, message, endpoint);
 }
 
 /** Build auth headers if token is available. */
@@ -187,19 +225,21 @@ function authHeaders(): Record<string, string> {
 async function apiGet<T>(path: string): Promise<T> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
+  const endpoint = `GET ${path}`;
   let res: Response;
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, { headers: authHeaders() });
   } catch (e) {
-    throw new Error(`Network error: server may be offline`);
+    throw ApiError.network('Network error: server may be offline', endpoint);
   }
-  if (!res.ok) throw new Error(await parseErrorResponse(res));
+  if (!res.ok) throw await parseErrorResponse(res, endpoint);
   return res.json();
 }
 
 async function apiPost<T>(path: string, body: unknown): Promise<T> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
+  const endpoint = `POST ${path}`;
   let res: Response;
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, {
@@ -208,15 +248,16 @@ async function apiPost<T>(path: string, body: unknown): Promise<T> {
       body: JSON.stringify(body),
     });
   } catch (e) {
-    throw new Error(`Network error: server may be offline`);
+    throw ApiError.network('Network error: server may be offline', endpoint);
   }
-  if (!res.ok) throw new Error(await parseErrorResponse(res));
+  if (!res.ok) throw await parseErrorResponse(res, endpoint);
   return res.json();
 }
 
 async function apiPut<T>(path: string, body: unknown): Promise<T> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
+  const endpoint = `PUT ${path}`;
   let res: Response;
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, {
@@ -225,22 +266,23 @@ async function apiPut<T>(path: string, body: unknown): Promise<T> {
       body: JSON.stringify(body),
     });
   } catch (e) {
-    throw new Error(`Network error: server may be offline`);
+    throw ApiError.network('Network error: server may be offline', endpoint);
   }
-  if (!res.ok) throw new Error(await parseErrorResponse(res));
+  if (!res.ok) throw await parseErrorResponse(res, endpoint);
   return res.json();
 }
 
 async function apiDelete(path: string): Promise<void> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
+  const endpoint = `DELETE ${path}`;
   let res: Response;
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, { method: 'DELETE', headers: authHeaders() });
   } catch (e) {
-    throw new Error(`Network error: server may be offline`);
+    throw ApiError.network('Network error: server may be offline', endpoint);
   }
-  if (!res.ok) throw new Error(await parseErrorResponse(res));
+  if (!res.ok) throw await parseErrorResponse(res, endpoint);
 }
 
 // --- Pattern API ---
@@ -386,6 +428,7 @@ export async function searchWorkflows(query: string, limit: number = 10): Promis
 async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
+  const endpoint = `PATCH ${path}`;
   let res: Response;
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, {
@@ -394,9 +437,9 @@ async function apiPatch<T>(path: string, body: unknown): Promise<T> {
       body: JSON.stringify(body),
     });
   } catch (e) {
-    throw new Error(`Network error: server may be offline`);
+    throw ApiError.network('Network error: server may be offline', endpoint);
   }
-  if (!res.ok) throw new Error(await parseErrorResponse(res));
+  if (!res.ok) throw await parseErrorResponse(res, endpoint);
   return res.json();
 }
 
