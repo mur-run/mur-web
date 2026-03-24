@@ -32,6 +32,7 @@ interface ApiWorkflow {
   trigger?: string;
   tools?: string[];
   steps?: { name?: string; description?: string }[];
+  variables?: { name?: string; type?: string; required?: boolean; default_value?: string; description?: string }[];
   created_at: string;
   updated_at: string;
 }

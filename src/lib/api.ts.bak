@@ -2,43 +2,6 @@ import type { Pattern, Workflow, DashboardStats, DataSource, Session, SessionDet
 import { mockPatterns, mockWorkflows } from './mock-data';
 import { adaptPattern, adaptWorkflow, unwrapList, unwrapOne } from './adapter';
 
-// --- ApiError ---
-
-export type ApiErrorKind = 'network' | 'auth' | 'not_found' | 'server' | 'validation' | 'unknown';
-
-export class ApiError extends Error {
-  readonly status: number;
-  readonly kind: ApiErrorKind;
-  readonly endpoint: string;
-
-  constructor(message: string, status: number, kind: ApiErrorKind, endpoint: string = '') {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.kind = kind;
-    this.endpoint = endpoint;
-  }
-
-  /** True for 5xx or network errors — caller may want to retry. */
-  get retryable(): boolean {
-    return this.kind === 'network' || this.kind === 'server';
-  }
-
-  static fromStatus(status: number, message: string, endpoint: string = ''): ApiError {
-    let kind: ApiErrorKind;
-    if (status === 401 || status === 403) kind = 'auth';
-    else if (status === 404) kind = 'not_found';
-    else if (status === 422 || status === 400) kind = 'validation';
-    else if (status >= 500) kind = 'server';
-    else kind = 'unknown';
-    return new ApiError(message, status, kind, endpoint);
-  }
-
-  static network(message: string, endpoint: string = ''): ApiError {
-    return new ApiError(message, 0, 'network', endpoint);
-  }
-}
-
 let dataSource: DataSource = 'demo';
 let baseUrl = '';
 
@@ -206,14 +169,13 @@ function apiPath(path: string): string {
   return `/api/v1${path}`;
 }
 
-async function parseErrorResponse(res: Response, endpoint: string = ''): Promise<ApiError> {
-  let message = `API error: ${res.status} ${res.statusText}`;
+async function parseErrorResponse(res: Response): Promise<string> {
   try {
     const body = await res.json();
-    if (body?.error) message = body.error;
-    else if (body?.message) message = body.message;
+    if (body?.error) return body.error;
+    if (body?.message) return body.message;
   } catch { /* ignore parse errors */ }
-  return ApiError.fromStatus(res.status, message, endpoint);
+  return `API error: ${res.status} ${res.statusText}`;
 }
 
 /** Build auth headers if token is available. */
@@ -225,21 +187,19 @@ function authHeaders(): Record<string, string> {
 async function apiGet<T>(path: string): Promise<T> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
-  const endpoint = `GET ${path}`;
   let res: Response;
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, { headers: authHeaders() });
   } catch (e) {
-    throw ApiError.network('Network error: server may be offline', endpoint);
+    throw new Error(`Network error: server may be offline`);
   }
-  if (!res.ok) throw await parseErrorResponse(res, endpoint);
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
   return res.json();
 }
 
 async function apiPost<T>(path: string, body: unknown): Promise<T> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
-  const endpoint = `POST ${path}`;
   let res: Response;
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, {
@@ -248,16 +208,15 @@ async function apiPost<T>(path: string, body: unknown): Promise<T> {
       body: JSON.stringify(body),
     });
   } catch (e) {
-    throw ApiError.network('Network error: server may be offline', endpoint);
+    throw new Error(`Network error: server may be offline`);
   }
-  if (!res.ok) throw await parseErrorResponse(res, endpoint);
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
   return res.json();
 }
 
 async function apiPut<T>(path: string, body: unknown): Promise<T> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
-  const endpoint = `PUT ${path}`;
   let res: Response;
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, {
@@ -266,23 +225,22 @@ async function apiPut<T>(path: string, body: unknown): Promise<T> {
       body: JSON.stringify(body),
     });
   } catch (e) {
-    throw ApiError.network('Network error: server may be offline', endpoint);
+    throw new Error(`Network error: server may be offline`);
   }
-  if (!res.ok) throw await parseErrorResponse(res, endpoint);
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
   return res.json();
 }
 
 async function apiDelete(path: string): Promise<void> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
-  const endpoint = `DELETE ${path}`;
   let res: Response;
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, { method: 'DELETE', headers: authHeaders() });
   } catch (e) {
-    throw ApiError.network('Network error: server may be offline', endpoint);
+    throw new Error(`Network error: server may be offline`);
   }
-  if (!res.ok) throw await parseErrorResponse(res, endpoint);
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
 }
 
 // --- Pattern API ---
@@ -428,7 +386,6 @@ export async function searchWorkflows(query: string, limit: number = 10): Promis
 async function apiPatch<T>(path: string, body: unknown): Promise<T> {
   await ensureBackend();
   if (dataSource === 'demo') throw new Error('demo mode');
-  const endpoint = `PATCH ${path}`;
   let res: Response;
   try {
     res = await fetch(`${baseUrl}${apiPath(path)}`, {
@@ -437,9 +394,9 @@ async function apiPatch<T>(path: string, body: unknown): Promise<T> {
       body: JSON.stringify(body),
     });
   } catch (e) {
-    throw ApiError.network('Network error: server may be offline', endpoint);
+    throw new Error(`Network error: server may be offline`);
   }
-  if (!res.ok) throw await parseErrorResponse(res, endpoint);
+  if (!res.ok) throw new Error(await parseErrorResponse(res));
   return res.json();
 }
 
@@ -516,13 +473,8 @@ let demoSessions = [...mockSessions];
 export async function getSessions(): Promise<Session[]> {
   await ensureBackend();
   if (dataSource === 'demo') return demoSessions;
-  try {
-    const raw = await apiGet<{ data: Session[] }>('/sessions');
-    return raw.data;
-  } catch (e) {
-    console.warn('[api] getSessions failed:', e);
-    return [];
-  }
+  const raw = await apiGet<{ data: Session[] }>('/sessions');
+  return raw.data;
 }
 
 export async function getSession(id: string): Promise<SessionDetail> {
@@ -532,13 +484,8 @@ export async function getSession(id: string): Promise<SessionDetail> {
     if (!s) throw new Error('Session not found');
     return { ...s, events: [] };
   }
-  try {
-    const raw = await apiGet<{ data: SessionDetail }>(`/sessions/${id}`);
-    return raw.data;
-  } catch (e) {
-    console.warn('[api] getSession failed:', e);
-    throw e;
-  }
+  const raw = await apiGet<{ data: SessionDetail }>(`/sessions/${id}`);
+  return raw.data;
 }
 
 export async function deleteSession(id: string): Promise<void> {
@@ -586,31 +533,23 @@ let demoPipelines: Pipeline[] = [];
 export async function getPipelines(): Promise<Pipeline[]> {
   await ensureBackend();
   if (dataSource === 'demo') return demoPipelines;
-  try {
-    const relayData = await relayCommand<Pipeline[]>('list_pipelines');
-    if (relayData) return relayData;
 
-    const raw = await apiGet<{ data: Pipeline[] }>('/pipelines');
-    return raw.data || [];
-  } catch (e) {
-    console.warn('[api] getPipelines failed:', e);
-    return [];
-  }
+  const relayData = await relayCommand<Pipeline[]>('list_pipelines');
+  if (relayData) return relayData;
+
+  const raw = await apiGet<{ data: Pipeline[] }>('/pipelines');
+  return raw.data || [];
 }
 
 export async function getPipeline(id: string): Promise<Pipeline | undefined> {
   await ensureBackend();
   if (dataSource === 'demo') return demoPipelines.find(p => p.id === id);
-  try {
-    const relayData = await relayCommand<Pipeline>('get_pipeline', { id });
-    if (relayData) return relayData;
 
-    const raw = await apiGet<{ data: Pipeline }>(`/pipelines/${id}`);
-    return raw.data;
-  } catch (e) {
-    console.warn('[api] getPipeline failed:', e);
-    return undefined;
-  }
+  const relayData = await relayCommand<Pipeline>('get_pipeline', { id });
+  if (relayData) return relayData;
+
+  const raw = await apiGet<{ data: Pipeline }>(`/pipelines/${id}`);
+  return raw.data;
 }
 
 export async function createPipeline(pipeline: { id?: string; expression: string; description: string }): Promise<Pipeline> {
