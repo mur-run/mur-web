@@ -1,130 +1,29 @@
 <script lang="ts">
   import {
-    getWorkflows as getCommanderWorkflows,
-    isCommanderConnected,
-    updateWorkflow,
-    removeSchedule,
-  } from '../lib/commander';
-  import type { CommanderWorkflow } from '../lib/commander-types';
+    getSchedules,
+    createOrUpdateSchedule,
+    deleteScheduleById,
+    setScheduleEnabled,
+    type ApiSchedule,
+  } from '../lib/api';
   import { describeCron, getNextRun, formatNextRun, formatLastRun } from '../lib/schedule-parser';
   import { showToast } from '../lib/toast';
   import ScheduleModal from '../components/ScheduleModal.svelte';
 
-  // Extended type that adds a lastRun field for display purposes
-  interface ScheduleEntry extends CommanderWorkflow {
-    lastRun?: string;
-  }
-
   // ─── State ───────────────────────────────────────────────────────────────────
 
-  let allWorkflows = $state<ScheduleEntry[]>([]);
+  let schedules = $state<ApiSchedule[]>([]);
   let loading = $state(true);
   let error = $state('');
   let showModal = $state(false);
-  let editingWorkflow = $state<ScheduleEntry | null>(null);
+  let editingSchedule = $state<ApiSchedule | null>(null);
   let confirmDeleteId = $state<string | null>(null);
   let savingId = $state<string | null>(null);
 
   // ─── Derived ─────────────────────────────────────────────────────────────────
 
-  let activeSchedules = $derived(
-    allWorkflows.filter(w => w.schedule && !w.schedule.startsWith('#disabled'))
-  );
-  let disabledSchedules = $derived(
-    allWorkflows.filter(w => w.schedule?.startsWith('#disabled'))
-  );
-  let unscheduledWorkflows = $derived(
-    allWorkflows.filter(w => !w.schedule)
-  );
-
-  // ─── Mock data ───────────────────────────────────────────────────────────────
-
-  const MOCK_WORKFLOWS: ScheduleEntry[] = [
-    {
-      id: 'mock-1',
-      name: 'Daily Standup Report',
-      description: 'Generate and post daily standup summary to Slack',
-      schedule: '0 9 * * 1-5',
-      lastRun: new Date(Date.now() - 18 * 3600_000).toISOString(),
-      steps: [],
-      variables: {},
-      created_at: new Date(Date.now() - 30 * 86400_000).toISOString(),
-      updated_at: new Date(Date.now() - 18 * 3600_000).toISOString(),
-    },
-    {
-      id: 'mock-2',
-      name: 'Dependency Audit',
-      description: 'Check for outdated packages and security vulnerabilities',
-      schedule: '0 2 * * 1',
-      lastRun: new Date(Date.now() - 6 * 86400_000).toISOString(),
-      steps: [],
-      variables: {},
-      created_at: new Date(Date.now() - 60 * 86400_000).toISOString(),
-      updated_at: new Date(Date.now() - 6 * 86400_000).toISOString(),
-    },
-    {
-      id: 'mock-3',
-      name: 'Test Suite Runner',
-      description: 'Run full integration test suite and report results',
-      schedule: '*/30 * * * *',
-      lastRun: new Date(Date.now() - 22 * 60_000).toISOString(),
-      steps: [],
-      variables: {},
-      created_at: new Date(Date.now() - 14 * 86400_000).toISOString(),
-      updated_at: new Date(Date.now() - 22 * 60_000).toISOString(),
-    },
-    {
-      id: 'mock-4',
-      name: 'Monthly Cost Report',
-      description: 'Aggregate and email monthly AI usage cost report',
-      schedule: '0 8 1 * *',
-      lastRun: new Date(Date.now() - 25 * 86400_000).toISOString(),
-      steps: [],
-      variables: {},
-      created_at: new Date(Date.now() - 90 * 86400_000).toISOString(),
-      updated_at: new Date(Date.now() - 25 * 86400_000).toISOString(),
-    },
-    {
-      id: 'mock-5',
-      name: 'Code Quality Check',
-      description: 'Lint and static analysis across the monorepo',
-      schedule: '#disabled: 0 6 * * *',
-      lastRun: new Date(Date.now() - 10 * 86400_000).toISOString(),
-      steps: [],
-      variables: {},
-      created_at: new Date(Date.now() - 45 * 86400_000).toISOString(),
-      updated_at: new Date(Date.now() - 10 * 86400_000).toISOString(),
-    },
-    {
-      id: 'mock-6',
-      name: 'Database Backup',
-      description: 'Snapshot and upload database to cold storage',
-      schedule: '#disabled: 0 3 * * *',
-      lastRun: new Date(Date.now() - 3 * 86400_000).toISOString(),
-      steps: [],
-      variables: {},
-      created_at: new Date(Date.now() - 120 * 86400_000).toISOString(),
-      updated_at: new Date(Date.now() - 3 * 86400_000).toISOString(),
-    },
-    {
-      id: 'mock-7',
-      name: 'Release Notes Generator',
-      description: 'Draft release notes from recent commits',
-      steps: [],
-      variables: {},
-      created_at: new Date(Date.now() - 5 * 86400_000).toISOString(),
-      updated_at: new Date(Date.now() - 5 * 86400_000).toISOString(),
-    },
-    {
-      id: 'mock-8',
-      name: 'PR Review Bot',
-      description: 'Auto-review open PRs for style and correctness',
-      steps: [],
-      variables: {},
-      created_at: new Date(Date.now() - 2 * 86400_000).toISOString(),
-      updated_at: new Date(Date.now() - 2 * 86400_000).toISOString(),
-    },
-  ];
+  let activeSchedules = $derived(schedules.filter(s => s.enabled));
+  let disabledSchedules = $derived(schedules.filter(s => !s.enabled));
 
   // ─── Load ────────────────────────────────────────────────────────────────────
 
@@ -136,54 +35,36 @@
     loading = true;
     error = '';
     try {
-      if (isCommanderConnected()) {
-        allWorkflows = await getCommanderWorkflows();
-      } else {
-        // Try anyway — commander might be available
-        try {
-          allWorkflows = await getCommanderWorkflows();
-        } catch {
-          allWorkflows = MOCK_WORKFLOWS;
-        }
-      }
-    } catch (e) {
-      allWorkflows = MOCK_WORKFLOWS;
+      schedules = await getSchedules();
+    } catch (e: any) {
+      error = e?.message ?? 'Failed to load schedules';
     }
     loading = false;
   }
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-  function cronOf(wf: ScheduleEntry): string {
-    return (wf.schedule ?? '').replace(/^#disabled:\s*/, '').trim();
-  }
-
-  function nextRunLabel(wf: ScheduleEntry): string {
-    if (!wf.schedule || wf.schedule.startsWith('#disabled')) return '—';
-    const d = getNextRun(wf.schedule);
+  function nextRunLabel(s: ApiSchedule): string {
+    if (!s.enabled) return '—';
+    const d = s.next_run_at ? new Date(s.next_run_at) : getNextRun(s.cron_expr);
     return d ? formatNextRun(d) : '—';
   }
 
   // ─── Actions ─────────────────────────────────────────────────────────────────
 
-  async function handleToggle(wf: ScheduleEntry) {
-    const isDisabled = wf.schedule?.startsWith('#disabled');
-    const cron = cronOf(wf);
-    const newSchedule = isDisabled ? cron : `#disabled: ${cron}`;
-    savingId = wf.id;
+  async function handleToggle(s: ApiSchedule) {
+    const newEnabled = !s.enabled;
+    savingId = s.id;
 
     // Optimistic update
-    const idx = allWorkflows.findIndex(w => w.id === wf.id);
-    if (idx >= 0) allWorkflows[idx] = { ...allWorkflows[idx], schedule: newSchedule };
+    const idx = schedules.findIndex(x => x.id === s.id);
+    if (idx >= 0) schedules[idx] = { ...schedules[idx], enabled: newEnabled };
 
     try {
-      if (isCommanderConnected()) {
-        await updateWorkflow(wf.id, { schedule: newSchedule });
-      }
-      showToast(isDisabled ? 'Schedule enabled' : 'Schedule paused', 'success');
+      await setScheduleEnabled(s.id, newEnabled);
+      showToast(newEnabled ? 'Schedule enabled' : 'Schedule paused', 'success');
     } catch (e) {
-      // Revert
-      if (idx >= 0) allWorkflows[idx] = { ...allWorkflows[idx], schedule: wf.schedule };
+      if (idx >= 0) schedules[idx] = { ...schedules[idx], enabled: s.enabled };
       showToast('Failed to update schedule', 'error');
     }
     savingId = null;
@@ -193,54 +74,50 @@
     confirmDeleteId = null;
     savingId = id;
 
-    // Optimistic update — remove schedule field
-    const idx = allWorkflows.findIndex(w => w.id === id);
-    const prev = allWorkflows[idx];
-    if (idx >= 0) allWorkflows[idx] = { ...allWorkflows[idx], schedule: undefined };
+    const idx = schedules.findIndex(x => x.id === id);
+    const prev = idx >= 0 ? schedules[idx] : null;
+    if (idx >= 0) schedules = schedules.filter(x => x.id !== id);
 
     try {
-      if (isCommanderConnected()) {
-        await removeSchedule(id);
-      }
+      await deleteScheduleById(id);
       showToast('Schedule removed', 'success');
     } catch (e) {
-      if (idx >= 0) allWorkflows[idx] = prev;
+      if (prev) schedules = [...schedules, prev];
       showToast('Failed to remove schedule', 'error');
     }
     savingId = null;
   }
 
-  async function handleSave(workflowId: string, cron: string, enabled: boolean) {
-    const schedule = enabled ? cron : `#disabled: ${cron}`;
+  async function handleSave(workflowName: string, cron: string, enabled: boolean) {
     showModal = false;
-    editingWorkflow = null;
-    savingId = workflowId;
-
-    // Optimistic update
-    const idx = allWorkflows.findIndex(w => w.id === workflowId);
-    if (idx >= 0) {
-      allWorkflows[idx] = { ...allWorkflows[idx], schedule };
-    }
+    const prevSchedule = editingSchedule;
+    editingSchedule = null;
+    savingId = workflowName;
 
     try {
-      if (isCommanderConnected()) {
-        await updateWorkflow(workflowId, { schedule });
+      const saved = await createOrUpdateSchedule({ workflow_name: workflowName, cron_expr: cron, enabled });
+      // Replace or add in list
+      const idx = schedules.findIndex(x => x.id === saved.id || x.workflow_name === workflowName);
+      if (idx >= 0) {
+        schedules[idx] = saved;
+      } else {
+        schedules = [...schedules, saved];
       }
       showToast('Schedule saved', 'success');
-    } catch (e) {
-      showToast('Failed to save schedule', 'error');
+    } catch (e: any) {
+      showToast(e?.message ?? 'Failed to save schedule', 'error');
       await loadSchedules();
     }
     savingId = null;
   }
 
   function openCreate() {
-    editingWorkflow = null;
+    editingSchedule = null;
     showModal = true;
   }
 
-  function openEdit(wf: ScheduleEntry) {
-    editingWorkflow = wf;
+  function openEdit(s: ApiSchedule) {
+    editingSchedule = s;
     showModal = true;
   }
 </script>
@@ -295,26 +172,26 @@
           <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-300">Active ({activeSchedules.length})</h2>
         </div>
         <div class="space-y-2">
-          {#each activeSchedules as wf (wf.id)}
-            <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 transition-all hover:border-slate-600/70 {savingId === wf.id ? 'opacity-60' : ''}">
+          {#each activeSchedules as s (s.id)}
+            <div class="rounded-lg border border-slate-700/50 bg-slate-800 p-4 transition-all hover:border-slate-600/70 {savingId === s.id ? 'opacity-60' : ''}">
               <div class="flex items-start gap-3">
                 <!-- Info -->
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-sm font-semibold text-slate-200">{wf.name}</span>
-                    <code class="rounded bg-slate-700 px-1.5 py-0.5 text-xs font-mono text-emerald-400">{cronOf(wf)}</code>
+                    <span class="text-sm font-semibold text-slate-200">{s.workflow_name}</span>
+                    <code class="rounded bg-slate-700 px-1.5 py-0.5 text-xs font-mono text-emerald-400">{s.cron_expr}</code>
                   </div>
-                  {#if wf.description}
-                    <p class="mt-0.5 text-xs text-slate-400 truncate">{wf.description}</p>
-                  {/if}
                   <div class="mt-2 flex items-center gap-4 text-xs text-slate-500 flex-wrap">
-                    <span class="text-emerald-400/80 font-medium">{describeCron(wf.schedule ?? '')}</span>
-                    {#if wf.lastRun}
-                      <span>Last: {formatLastRun(wf.lastRun)}</span>
+                    <span class="text-emerald-400/80 font-medium">{describeCron(s.cron_expr)}</span>
+                    {#if s.last_run_at}
+                      <span>Last: {formatLastRun(s.last_run_at)}</span>
                     {:else}
                       <span>Never run</span>
                     {/if}
-                    <span class="text-slate-600">Next: {nextRunLabel(wf)}</span>
+                    <span class="text-slate-600">Next: {nextRunLabel(s)}</span>
+                    {#if s.run_count}
+                      <span>{s.run_count} runs</span>
+                    {/if}
                   </div>
                 </div>
 
@@ -322,8 +199,8 @@
                 <div class="flex items-center gap-2 shrink-0">
                   <!-- Toggle -->
                   <button
-                    onclick={() => handleToggle(wf)}
-                    disabled={savingId === wf.id}
+                    onclick={() => handleToggle(s)}
+                    disabled={savingId === s.id}
                     role="switch"
                     aria-checked={true}
                     title="Disable schedule"
@@ -334,7 +211,7 @@
 
                   <!-- Edit -->
                   <button
-                    onclick={() => openEdit(wf)}
+                    onclick={() => openEdit(s)}
                     title="Edit schedule"
                     class="rounded-md p-1.5 text-slate-500 hover:bg-slate-700 hover:text-slate-300 transition-colors"
                   >
@@ -344,10 +221,10 @@
                   </button>
 
                   <!-- Delete -->
-                  {#if confirmDeleteId === wf.id}
+                  {#if confirmDeleteId === s.id}
                     <div class="flex items-center gap-1">
                       <button
-                        onclick={() => handleDeleteConfirm(wf.id)}
+                        onclick={() => handleDeleteConfirm(s.id)}
                         class="rounded-md px-2 py-1 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
                       >
                         Confirm
@@ -361,7 +238,7 @@
                     </div>
                   {:else}
                     <button
-                      onclick={() => confirmDeleteId = wf.id}
+                      onclick={() => confirmDeleteId = s.id}
                       title="Remove schedule"
                       class="rounded-md p-1.5 text-slate-600 hover:bg-slate-700 hover:text-red-400 transition-colors"
                     >
@@ -386,22 +263,19 @@
           <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-500">Paused ({disabledSchedules.length})</h2>
         </div>
         <div class="space-y-2">
-          {#each disabledSchedules as wf (wf.id)}
-            <div class="rounded-lg border border-slate-700/30 bg-slate-800/50 p-4 opacity-70 transition-all hover:opacity-90 hover:border-slate-700/50 {savingId === wf.id ? 'opacity-40' : ''}">
+          {#each disabledSchedules as s (s.id)}
+            <div class="rounded-lg border border-slate-700/30 bg-slate-800/50 p-4 opacity-70 transition-all hover:opacity-90 hover:border-slate-700/50 {savingId === s.id ? 'opacity-40' : ''}">
               <div class="flex items-start gap-3">
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-sm font-semibold text-slate-300">{wf.name}</span>
-                    <code class="rounded bg-slate-700/60 px-1.5 py-0.5 text-xs font-mono text-slate-500">{cronOf(wf)}</code>
+                    <span class="text-sm font-semibold text-slate-300">{s.workflow_name}</span>
+                    <code class="rounded bg-slate-700/60 px-1.5 py-0.5 text-xs font-mono text-slate-500">{s.cron_expr}</code>
                     <span class="rounded-full bg-slate-700/50 px-1.5 py-0.5 text-[10px] font-medium text-slate-500 uppercase tracking-wide">paused</span>
                   </div>
-                  {#if wf.description}
-                    <p class="mt-0.5 text-xs text-slate-500 truncate">{wf.description}</p>
-                  {/if}
                   <div class="mt-2 flex items-center gap-4 text-xs text-slate-600">
-                    <span>{describeCron(wf.schedule ?? '')}</span>
-                    {#if wf.lastRun}
-                      <span>Last: {formatLastRun(wf.lastRun)}</span>
+                    <span>{describeCron(s.cron_expr)}</span>
+                    {#if s.last_run_at}
+                      <span>Last: {formatLastRun(s.last_run_at)}</span>
                     {/if}
                   </div>
                 </div>
@@ -409,8 +283,8 @@
                 <div class="flex items-center gap-2 shrink-0">
                   <!-- Toggle (off state) -->
                   <button
-                    onclick={() => handleToggle(wf)}
-                    disabled={savingId === wf.id}
+                    onclick={() => handleToggle(s)}
+                    disabled={savingId === s.id}
                     role="switch"
                     aria-checked={false}
                     title="Enable schedule"
@@ -421,7 +295,7 @@
 
                   <!-- Edit -->
                   <button
-                    onclick={() => openEdit(wf)}
+                    onclick={() => openEdit(s)}
                     title="Edit schedule"
                     class="rounded-md p-1.5 text-slate-600 hover:bg-slate-700 hover:text-slate-300 transition-colors"
                   >
@@ -431,10 +305,10 @@
                   </button>
 
                   <!-- Delete -->
-                  {#if confirmDeleteId === wf.id}
+                  {#if confirmDeleteId === s.id}
                     <div class="flex items-center gap-1">
                       <button
-                        onclick={() => handleDeleteConfirm(wf.id)}
+                        onclick={() => handleDeleteConfirm(s.id)}
                         class="rounded-md px-2 py-1 text-xs font-medium text-red-400 hover:bg-red-500/10 transition-colors"
                       >
                         Confirm
@@ -448,7 +322,7 @@
                     </div>
                   {:else}
                     <button
-                      onclick={() => confirmDeleteId = wf.id}
+                      onclick={() => confirmDeleteId = s.id}
                       title="Remove schedule"
                       class="rounded-md p-1.5 text-slate-600 hover:bg-slate-700 hover:text-red-400 transition-colors"
                     >
@@ -507,9 +381,9 @@
 <!-- Create/Edit modal -->
 {#if showModal}
   <ScheduleModal
-    workflows={allWorkflows}
-    editWorkflow={editingWorkflow}
+    existingSchedules={schedules}
+    editSchedule={editingSchedule}
     onSave={handleSave}
-    onCancel={() => { showModal = false; editingWorkflow = null; }}
+    onCancel={() => { showModal = false; editingSchedule = null; }}
   />
 {/if}

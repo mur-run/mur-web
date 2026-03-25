@@ -1,32 +1,30 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { parseSchedule, describeCron, getNextRun, formatNextRun } from '../lib/schedule-parser';
-  import type { CommanderWorkflow } from '../lib/commander-types';
+  import type { ApiSchedule } from '../lib/api';
 
   interface Props {
-    workflows: CommanderWorkflow[];
-    editWorkflow?: CommanderWorkflow | null;
-    onSave: (workflowId: string, cron: string, enabled: boolean) => void;
+    existingSchedules: ApiSchedule[];
+    editSchedule?: ApiSchedule | null;
+    onSave: (workflowName: string, cron: string, enabled: boolean) => void;
     onCancel: () => void;
   }
 
-  let { workflows, editWorkflow = null, onSave, onCancel }: Props = $props();
-
-  function extractCron(wf: CommanderWorkflow | null | undefined): string {
-    if (!wf?.schedule) return '';
-    return wf.schedule.replace(/^#disabled:\s*/, '').trim();
-  }
+  let { existingSchedules, editSchedule = null, onSave, onCancel }: Props = $props();
 
   // Modal is recreated on each open — intentionally snapshot prop values at mount
-  let selectedId = $state(untrack(() => editWorkflow?.id ?? ''));
+  let workflowName = $state(untrack(() => editSchedule?.workflow_name ?? ''));
   let nlInput = $state('');
-  let cronExpr = $state(untrack(() => extractCron(editWorkflow)));
-  let enabled = $state(untrack(() => !(editWorkflow?.schedule?.startsWith('#disabled') ?? false)));
+  let cronExpr = $state(untrack(() => editSchedule?.cron_expr ?? ''));
+  let enabled = $state(untrack(() => editSchedule?.enabled ?? true));
   let nlError = $state('');
 
   let cronDescription = $derived(cronExpr.trim() ? describeCron(cronExpr.trim()) : '');
-  let canSave = $derived(!!selectedId && !!cronExpr.trim());
+  let canSave = $derived(!!workflowName.trim() && !!cronExpr.trim());
   let nextRun = $derived(cronExpr.trim() ? getNextRun(cronExpr.trim()) : null);
+
+  // Suggest workflow names from existing schedules
+  let existingNames = $derived([...new Set(existingSchedules.map(s => s.workflow_name))]);
 
   const NL_EXAMPLES = [
     'every day at 9am',
@@ -41,7 +39,6 @@
   let exampleIdx = $state(0);
   let placeholder = $derived(NL_EXAMPLES[exampleIdx % NL_EXAMPLES.length]);
 
-  // Cycle placeholder on focus
   function onNlFocus() {
     exampleIdx = (exampleIdx + 1) % NL_EXAMPLES.length;
   }
@@ -63,7 +60,7 @@
   function handleSubmit(e: Event) {
     e.preventDefault();
     if (!canSave) return;
-    onSave(selectedId, cronExpr.trim(), enabled);
+    onSave(workflowName.trim(), cronExpr.trim(), enabled);
   }
 
   function handleBackdropClick(e: MouseEvent) {
@@ -86,7 +83,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between border-b border-slate-700/50 px-5 py-4">
       <h2 class="text-base font-semibold text-slate-100">
-        {editWorkflow ? 'Edit Schedule' : 'New Schedule'}
+        {editSchedule ? 'Edit Schedule' : 'New Schedule'}
       </h2>
       <button
         onclick={onCancel}
@@ -100,27 +97,32 @@
     </div>
 
     <form onsubmit={handleSubmit} class="p-5 space-y-5">
-      <!-- Workflow selector -->
+      <!-- Workflow name input -->
       <div class="space-y-1.5">
-        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider" for="wf-select">
-          Workflow
+        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider" for="wf-name">
+          Workflow name
         </label>
-        {#if editWorkflow}
+        {#if editSchedule}
           <div class="rounded-lg border border-slate-700/50 bg-slate-800 px-3 py-2 text-sm text-slate-200">
-            {editWorkflow.name}
+            {editSchedule.workflow_name}
             <span class="ml-2 text-xs text-slate-500">(editing)</span>
           </div>
         {:else}
-          <select
-            id="wf-select"
-            bind:value={selectedId}
-            class="w-full rounded-lg border border-slate-700/50 bg-slate-800 px-3 py-2 text-sm text-slate-200 focus:border-emerald-500/60 focus:outline-none appearance-none"
-          >
-            <option value="" disabled>Select a workflow…</option>
-            {#each workflows as wf}
-              <option value={wf.id}>{wf.name}</option>
-            {/each}
-          </select>
+          <input
+            id="wf-name"
+            type="text"
+            bind:value={workflowName}
+            list="wf-suggestions"
+            placeholder="e.g. Daily Standup Report"
+            class="w-full rounded-lg border border-slate-700/50 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:border-emerald-500/60 focus:outline-none transition-colors"
+          />
+          {#if existingNames.length > 0}
+            <datalist id="wf-suggestions">
+              {#each existingNames as name}
+                <option value={name}></option>
+              {/each}
+            </datalist>
+          {/if}
         {/if}
       </div>
 
@@ -232,7 +234,7 @@
           disabled={!canSave}
           class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
         >
-          {editWorkflow ? 'Save Changes' : 'Create Schedule'}
+          {editSchedule ? 'Save Changes' : 'Create Schedule'}
         </button>
       </div>
     </form>
