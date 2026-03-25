@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { parseSchedule, describeCron } from '../lib/schedule-parser';
+  import { untrack } from 'svelte';
+  import { parseSchedule, describeCron, getNextRun, formatNextRun } from '../lib/schedule-parser';
   import type { CommanderWorkflow } from '../lib/commander-types';
 
   interface Props {
@@ -16,16 +17,16 @@
     return wf.schedule.replace(/^#disabled:\s*/, '').trim();
   }
 
-  // Snapshot prop on mount (modal is created fresh each open/close cycle)
-  const _ew = editWorkflow;
-  let selectedId = $state(_ew?.id ?? '');
+  // Modal is recreated on each open — intentionally snapshot prop values at mount
+  let selectedId = $state(untrack(() => editWorkflow?.id ?? ''));
   let nlInput = $state('');
-  let cronExpr = $state(extractCron(_ew ?? null));
-  let enabled = $state(!_ew?.schedule?.startsWith('#disabled'));
+  let cronExpr = $state(untrack(() => extractCron(editWorkflow)));
+  let enabled = $state(untrack(() => !(editWorkflow?.schedule?.startsWith('#disabled') ?? false)));
   let nlError = $state('');
 
   let cronDescription = $derived(cronExpr.trim() ? describeCron(cronExpr.trim()) : '');
   let canSave = $derived(!!selectedId && !!cronExpr.trim());
+  let nextRun = $derived(cronExpr.trim() ? getNextRun(cronExpr.trim()) : null);
 
   const NL_EXAMPLES = [
     'every day at 9am',
@@ -168,6 +169,9 @@
         />
         {#if cronDescription}
           <p class="text-xs text-slate-400">{cronDescription}</p>
+          {#if nextRun}
+            <p class="text-xs text-slate-500">Next run: <span class="text-emerald-400/80 font-medium">{formatNextRun(nextRun)}</span></p>
+          {/if}
         {:else if cronExpr.trim()}
           <p class="text-xs text-slate-600">Invalid cron expression</p>
         {/if}
