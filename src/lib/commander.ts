@@ -90,6 +90,24 @@ export async function runWorkflow(id: string, opts?: { shadow?: boolean; vars?: 
   return cmdPost<ExecutionResult>(`/workflows/${id}/run${qs ? '?' + qs : ''}`);
 }
 
+// --- Schedules ---
+
+export async function setSchedule(workflowId: string, cron: string): Promise<CommanderWorkflow> {
+  return cmdPut<CommanderWorkflow>(`/api/editor/workflows/${workflowId}`, { schedule: cron });
+}
+
+export async function enableSchedule(workflowId: string, cron: string): Promise<CommanderWorkflow> {
+  return cmdPut<CommanderWorkflow>(`/api/editor/workflows/${workflowId}`, { schedule: cron });
+}
+
+export async function disableSchedule(workflowId: string, cron: string): Promise<CommanderWorkflow> {
+  return cmdPut<CommanderWorkflow>(`/api/editor/workflows/${workflowId}`, { schedule: `#disabled: ${cron}` });
+}
+
+export async function removeSchedule(workflowId: string): Promise<CommanderWorkflow> {
+  return cmdPut<CommanderWorkflow>(`/api/editor/workflows/${workflowId}`, { schedule: '' });
+}
+
 // --- Audit ---
 
 export async function searchAudit(query?: string): Promise<AuditEntry[]> {

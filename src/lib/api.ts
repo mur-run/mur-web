@@ -713,6 +713,62 @@ export async function validatePipeline(expression: string): Promise<PipelineVali
   return apiPost<PipelineValidation>('/pipelines/validate', { expression });
 }
 
+// --- Schedule API ---
+
+export interface ApiSchedule {
+  id: string;
+  user_id: string;
+  workflow_name: string;
+  cron_expr: string;
+  timezone: string;
+  enabled: boolean;
+  notify_type?: string;
+  notify_target?: string;
+  next_run_at?: string | null;
+  last_run_at?: string | null;
+  last_status?: string;
+  run_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getSchedules(): Promise<ApiSchedule[]> {
+  await ensureBackend();
+  if (dataSource === 'demo') return [];
+  try {
+    const raw = await apiGet<{ data: ApiSchedule[] }>('/schedules');
+    return raw?.data ?? [];
+  } catch (e) {
+    console.warn('[api] getSchedules failed:', e);
+    return [];
+  }
+}
+
+export async function createOrUpdateSchedule(data: {
+  workflow_name: string;
+  cron_expr: string;
+  enabled?: boolean;
+  timezone?: string;
+}): Promise<ApiSchedule> {
+  await ensureBackend();
+  const raw = await apiPost<{ data: ApiSchedule }>('/schedules', {
+    ...data,
+    timezone: data.timezone ?? 'UTC',
+    enabled: data.enabled ?? true,
+  });
+  return raw.data;
+}
+
+export async function deleteScheduleById(id: string): Promise<void> {
+  await ensureBackend();
+  await apiDelete(`/schedules/${id}`);
+}
+
+export async function setScheduleEnabled(id: string, enabled: boolean): Promise<void> {
+  await ensureBackend();
+  await apiPatch(`/schedules/${id}`, { enabled });
+}
+
 // --- Dashboard API ---
 
 export async function getDashboardStats(): Promise<DashboardStats> {
